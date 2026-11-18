@@ -7,7 +7,7 @@
   const baseRaw=JSON.parse($('embedded-data').textContent),demoRaw=JSON.parse($('embedded-demo').textContent);let raw=structuredClone(baseRaw);
   const storageKey='volunteer-planner-v2:'+location.pathname;
   let rosterKind='candidates',rosterPage=1,selected=new Set(),history=[],editing=null,confirmAction=null,activePage='overview';
-  let config=JSON.parse($('embedded-config').textContent),data,result,metric='actual',page=1,toastTimer;
+  let config=JSON.parse($('embedded-config').textContent),data,result,metric='actual',page=1,toastTimer,assignmentEditing=null;
   const freshConfig=()=>({...structuredClone(Planner.defaults),enabled:data.sessions.map(s=>s.id)});
   const staffName=id=>data.staff.find(p=>p.id===id)?.name||'—';
   const slotLabel=id=>data.sessions.find(s=>s.id===id)?.label||'待安排';
@@ -27,7 +27,7 @@
     document.querySelectorAll('.section').forEach(e=>e.classList.toggle('active',e.id===id));
     document.querySelectorAll('.nav button').forEach(e=>{e.classList.toggle('active',e.dataset.page===id);e.setAttribute('aria-current',e.dataset.page===id?'page':'false');});
     activePage=id;
-    const titles={overview:['排班总览','覆盖人数、面试时长，一眼看清。'],schedule:['面试安排','查看每位候选人的时间与面试官。'],staff:['人员排班','协调面试官与场务的分工。'],data:['名单管理','导入、编辑名单，自动同步排班。']};
+    const titles={overview:['排班总览','覆盖人数、面试时长，一眼看清。'],schedule:['面试安排','可调整时间与面试官，保存后直接导出。'],staff:['人员排班','协调面试官与场务的分工。'],data:['名单管理','导入、编辑名单，自动同步排班。']};
     [$('pageTitle').textContent,$('introText').textContent]=titles[id];
     $('settings').hidden=id==='data';$('periodLabel').parentElement.hidden=id==='data';$('globalNotice').hidden=id==='data';
   }
@@ -36,9 +36,15 @@
     $('sessionToggles').innerHTML=data.sessions.map(s=>`<label><input type="checkbox" value="${esc(s.id)}" aria-label="${esc(s.label)}" ${config.enabled.includes(s.id)?'checked':''}><span class="session-text"><strong>${Number(s.date.slice(5,7))}月${s.day}日</strong><span>${hm(s.start)}–${hm(s.end)}</span></span></label>`).join('');
     $('sessionFilter').innerHTML='<option value="all">全部时段</option>'+data.sessions.map(s=>`<option value="${s.id}">${s.label}</option>`).join('');
   }
-  function compute(){
-    const next=Planner.solve(data,config),errors=Planner.validate(data,next);if(errors.length)throw Error('校验失败：'+errors.join('；'));
-    result=next;page=1;render();
+  function calculate(d,cfg){
+    const next=Adjustments.apply(d,Planner.solve(d,cfg),cfg?.adjustments||{}),errors=Planner.validate(d,next);if(errors.length)throw Error('校验失败：'+errors.join('；'));return next;
+  }
+  function remember(){history.push({raw:structuredClone(raw),config:structuredClone(config)});if(history.length>20)history.shift();}
+  function commitConfig(next,settings=false){
+    const nr=calculate(data,next),savedPage=page;remember();config=next;if(settings)hydrateSettings();compute(nr);page=savedPage;renderSchedule();
+  }
+  function compute(next=calculate(data,config)){
+    result=next;config=next.config;page=1;render();
     $('embedded-data').textContent=JSON.stringify(raw).replace(/</g,'\\u003c');
     $('embedded-config').textContent=JSON.stringify(config).replace(/</g,'\\u003c');
     persist();
@@ -70,8 +76,8 @@
     document.querySelectorAll('[data-metric]').forEach(b=>b.classList.toggle('active',b.dataset.metric===metric));
   }
   function table(items,preview=false){
-    const headers=['候选人','学号','面试方式','面试日期 / 时段','具体时间','实际时长','面试官','状态'];
-    return `<table><thead><tr>${headers.map(h=>`<th scope="col">${h}</th>`).join('')}</tr></thead><tbody>${items.length?items.map(c=>`<tr><td><strong>${esc(c.name)}</strong></td><td class="id">${esc(c.id)}</td><td><span class="tag ${c.online?'online':''}">${c.online?'线上':'线下'}</span></td><td>${c.session?esc(slotLabel(c.session)):`<span title="${esc(c.slots.map(slotLabel).join('、'))}">${esc(c.reason)}</span>`}</td><td>${c.session?`<strong>${hm(c.start)}–${hm(c.end)}</strong>`:'—'}</td><td>${durationLabel(c.durationSeconds)}</td><td>${esc(staffName(c.interviewer))}</td><td><span class="tag ${c.session?'good':'warn'}">${c.status}</span></td></tr>`).join(''):'<tr><td class="empty" colspan="8">没有符合筛选条件的候选人</td></tr>'}</tbody></table>`;
+    const headers=['候选人','学号','面试方式','面试日期 / 时段','具体时间','实际时长','面试官','状态',...(preview?[]:['操作'])];
+    return `<table><thead><tr>${headers.map(h=>`<th scope="col">${h}</th>`).join('')}</tr></thead><tbody>${items.length?items.map(c=>`<tr><td><strong>${esc(c.name)}</strong></td><td class="id">${esc(c.id)}</td><td><span class="tag ${c.online?'online':''}">${c.online?'线上':'线下'}</span></td><td>${c.session?esc(slotLabel(c.session)):`<span title="${esc(c.slots.map(slotLabel).join('、'))}">${esc(c.reason)}</span>`}</td><td>${c.session?`<strong>${hm(c.start)}–${hm(c.end)}</strong>`:'—'}</td><td>${durationLabel(c.durationSeconds)}</td><td>${esc(staffName(c.interviewer))}</td><td><span class="tag ${c.session?'good':'warn'}">${c.status}</span></td>${preview?'':`<td><button class="text small" data-adjust="${esc(c.id)}" aria-label="调整 ${esc(c.name)} 的面试安排">${c.session?'调整':'安排'}</button></td>`}</tr>`).join(''):`<tr><td class="empty" colspan="${headers.length}">没有符合筛选条件的候选人</td></tr>`}</tbody></table>`;
   }
   function filtered(){
     const q=$('search').value.trim().toLowerCase(),s=$('sessionFilter').value,m=$('modeFilter').value,st=$('statusFilter').value;
@@ -82,7 +88,8 @@
     $('scheduleTable').innerHTML=table(list.slice((page-1)*40,page*40));
     $('paginationText').textContent=`共 ${list.length} 人${list.length?`，显示 ${(page-1)*40+1}–${Math.min(page*40,list.length)} 人`:''}`;
     $('pageNumber').textContent=`${page} / ${pages}`;$('prevPage').disabled=page<=1;$('nextPage').disabled=page>=pages;
-    $('scheduleCaption').textContent=`${result.matched} 人已安排，${result.unassigned.length} 人待安排。`;
+    $('scheduleCaption').textContent=`${result.matched} 人已安排 · ${result.unassigned.length} 人待安排${result.manualCount?' · '+result.manualCount+' 人手动调整':''}`;
+    $('undoSchedule').disabled=!history.length;$('resetAdjustments').hidden=!result.manualCount;
   }
   function renderStaff(){
     $('staffTable').innerHTML='<table><thead><tr><th>工作人员</th>'+data.sessions.map(s=>`<th>${Number(s.date.slice(5,7))} 月 ${s.day} 日<br>${hm(s.start)}–${hm(s.end)}</th>`).join('')+'<th>面试人数</th><th>场务班次</th></tr></thead><tbody>'+data.staff.map(p=>{
@@ -107,7 +114,7 @@
     const compression=result.compressedCount?`${result.compressedCount} 人已缩短时长，平均 ${minutes(result.averageDuration)} 分钟。`:'';
     $('globalNotice').innerHTML=pending||warns.length?`<div class="notice"><strong>${pending?pending+' 人待安排':'人员配置需检查'}</strong>${compression?' · '+compression:''}<details><summary>查看原因</summary>${warns.map(esc).join('<br>')||'请在面试安排中查看原因，或调整可用时间和人员。'}</details></div>`:compression?`<div class="notice ok">已安排全部 ${result.total} 人 · ${compression}</div>`:'';
     renderHeat();
-    $('capacityList').innerHTML=result.sessions.map(s=>`<div><div class="capacity-title"><strong style="font-weight:500">${s.label}</strong><span>${s.count} / ${s.standardCapacity} 人</span></div><div class="capacity-track"><i style="width:${s.standardCapacity?Math.min(100,100*s.count/s.standardCapacity):s.count?100:0}%"></i></div><div class="capacity-meta"><span>${s.interviewers.length} 位面试官 · ${s.fieldStaff.length} 位场务</span><span>${s.count?'实际 '+durationLabel(s.durationSeconds):'暂无面试'}</span></div></div>`).join('')||'<div class="empty">暂无时段</div>';
+    $('capacityList').innerHTML=result.sessions.map(s=>`<div><div class="capacity-title"><strong style="font-weight:500">${s.label}</strong><span>${s.count} / ${s.standardCapacity} 人</span></div><div class="capacity-track"><i style="width:${s.standardCapacity?Math.min(100,100*s.count/s.standardCapacity):s.count?100:0}%"></i></div><div class="capacity-meta"><span>${s.interviewers.length} 位面试官 · ${s.fieldStaff.length} 位场务</span><span>${s.count?'平均 '+minutes(s.scheduledAverage)+' 分钟':'暂无面试'}</span></div></div>`).join('')||'<div class="empty">暂无时段</div>';
     $('slotBadge').textContent=`${result.sessions.filter(s=>s.enabled).length} 个时段`;
     $('capacityNote').textContent=`参考容量按 ${config.duration} 分钟计算，超出时自动缩短面试。`;
     $('previewTable').innerHTML=table(result.assignments.slice(0,5),true);
@@ -126,15 +133,15 @@
     try{localStorage.setItem(storageKey,JSON.stringify({raw,config}));$('saveStatus').textContent='已保存到本机';}
     catch{$('saveStatus').textContent='请保存网页备份';}
   }
-  function applyRaw(next,reset=false,remember=true,restoredConfig=null){
+  function applyRaw(next,reset=false,saveHistory=true,restoredConfig=null,renamedCandidates={}){
     next=Roster.canonical(next);
     const nd=Planner.normalize(next.candidates,next.staff,next.sources,next.year);
-    const nc=restoredConfig|| (reset?{...structuredClone(Planner.defaults),duration:config.duration,gap:config.gap,reserve:config.reserve,field:config.field,enabled:nd.sessions.map(s=>s.id),overrides:{}}:Roster.reconcile(config,data,nd));
-    const nr=Planner.solve(nd,nc),errors=Planner.validate(nd,nr);if(errors.length)throw Error(errors.join('；'));
-    if(remember){history.push({raw:structuredClone(raw),config:structuredClone(config)});if(history.length>20)history.shift();}
+    const nc=restoredConfig|| (reset?{...structuredClone(Planner.defaults),duration:config.duration,gap:config.gap,reserve:config.reserve,field:config.field,enabled:nd.sessions.map(s=>s.id),overrides:{}}:Roster.reconcile(config,data,nd,renamedCandidates));
+    const nr=calculate(nd,nc);
+    if(saveHistory)remember();
     raw=next;data=nd;config=nc;rosterPage=1;selected.clear();$('importYear').value=raw.year;
     if(reset){rosterKind='candidates';$('rosterSearch').value='';$('candidateFile').value='';$('staffFile').value='';}
-    hydrateSettings();compute();
+    hydrateSettings();compute(nr);
   }
   function renderSources(){
     for(const [source,file,index,count] of [['candidateSource','candidateFile',0,data.candidates.length],['staffSource','staffFile',1,data.staff.length]]){
@@ -168,6 +175,35 @@
   function deleteRecords(keys){
     if(!keys.length)return;
     askReplace(`删除 ${keys.length} 位${rosterKind==='candidates'?'候选人':'工作人员'}？排班将自动更新，可撤销。`,()=>{applyRaw(Roster.remove(raw,rosterKind,keys));toast(`已删除 ${keys.length} 人，可撤销`);});
+  }
+  function openAssignment(id){
+    const c=[...result.assignments,...result.unassigned].find(c=>c.id===id);if(!c)return;
+    assignmentEditing={id,duration:c.durationSeconds||config.duration*60};
+    $('assignmentTitle').textContent=c.session?'调整面试安排':'安排面试';$('assignmentPerson').textContent=`${c.name} · ${c.id} · ${c.online?'线上':'线下'}`;
+    const sessions=result.sessions.filter(s=>c.slots.includes(s.id)&&s.enabled&&s.covered&&s.interviewers.length);
+    $('assignmentSession').innerHTML=sessions.length?sessions.map(s=>`<option value="${esc(s.id)}">${s.date} ${hm(s.start)}–${hm(s.end)}</option>`).join(''):'<option value="">暂无可用时段</option>';
+    if(c.session&&sessions.some(s=>s.id===c.session))$('assignmentSession').value=c.session;
+    assignmentInterviewers(c.interviewer);
+    $('assignmentStart').value=c.session?hm(c.start):'';$('assignmentEnd').value=c.session?hm(c.end):'';
+    $('assignmentError').textContent=sessions.length?'':'暂无符合可用时间和人员配置的时段，请先在名单或人员排班中调整。';
+    $('saveAssignment').disabled=!sessions.length;$('resetOneAssignment').hidden=!c.manual;
+    renderAssignmentFree();if(!c.session)suggestAssignment();$('assignmentDialog').showModal();
+  }
+  function assignmentInterviewers(preferred){
+    const s=result.sessions.find(s=>s.id===$('assignmentSession').value),people=s?.interviewers||[];
+    $('assignmentInterviewer').innerHTML=people.length?people.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join(''):'<option value="">暂无面试官</option>';
+    if(people.some(p=>p.id===preferred))$('assignmentInterviewer').value=preferred;
+  }
+  function assignmentSpaces(){return Adjustments.free(result,assignmentEditing.id,$('assignmentSession').value,$('assignmentInterviewer').value);}
+  function renderAssignmentFree(){
+    const free=assignmentSpaces();$('assignmentFree').textContent=free.length?free.slice(0,6).map(w=>`${hm(w.start/60)}–${hm(w.end/60)}`).join('、')+(free.length>6?` 等 ${free.length} 个空档`:''):'暂无空闲时间，可更换时段或面试官。';
+    $('suggestAssignment').disabled=!free.length;
+  }
+  function suggestAssignment(){
+    const spaces=assignmentSpaces(),space=spaces.find(w=>w.end-w.start>=assignmentEditing.duration)||spaces[0];
+    if(space){$('assignmentStart').value=hm(space.start/60);$('assignmentEnd').value=hm((space.start+Math.min(assignmentEditing.duration,space.end-space.start))/60);}
+    else{$('assignmentStart').value='';$('assignmentEnd').value='';}
+    renderAssignmentFree();
   }
   function localDate(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
   function openEditor(key){
@@ -238,13 +274,24 @@
   $('viewAll').onclick=()=>navigate('schedule');$('importShortcut').onclick=()=>navigate('data');
   document.querySelectorAll('[data-metric]').forEach(b=>b.onclick=()=>{metric=b.dataset.metric;renderHeat();});
   $('heatmap').onclick=e=>{const b=e.target.closest('[data-slot]');if(b){$('sessionFilter').value=b.dataset.slot;$('statusFilter').value='assigned';$('search').value='';$('modeFilter').value='all';page=1;renderSchedule();navigate('schedule');}};
-  $('settingsForm').onsubmit=e=>{e.preventDefault();const previous=config;try{
-    config={...config,...Object.fromEntries(['duration','gap','reserve','field'].map(k=>[k,Number($(k).value)])),enabled:[...$('sessionToggles').querySelectorAll('input:checked')].map(x=>x.value)};compute();toast('排班已更新');
-  }catch(error){config=previous;hydrateSettings();toast(error.message);}};
-    $('resetSettings').onclick=()=>{config=freshConfig();hydrateSettings();compute();toast('已恢复参考 5 分钟与每场 1 位场务');};
+  $('settingsForm').onsubmit=e=>{e.preventDefault();try{
+    commitConfig({...config,...Object.fromEntries(['duration','gap','reserve','field'].map(k=>[k,Number($(k).value)])),enabled:[...$('sessionToggles').querySelectorAll('input:checked')].map(x=>x.value)},true);toast('排班已更新，手动调整已保留');
+  }catch(error){hydrateSettings();toast(error.message);}};
+  $('resetSettings').onclick=()=>{try{commitConfig({...freshConfig(),adjustments:config.adjustments||{}},true);toast('已恢复默认参数，手动调整已保留');}catch(error){toast(error.message);}};
   for(const id of ['search','sessionFilter','modeFilter','statusFilter'])$(id).addEventListener(id==='search'?'input':'change',()=>{page=1;renderSchedule();});
   $('prevPage').onclick=()=>{page--;renderSchedule();};$('nextPage').onclick=()=>{page++;renderSchedule();};
-  $('staffTable').onchange=e=>{const key=e.target.dataset.roleKey;if(!key)return;const previous=structuredClone(config);try{config.overrides[key]=e.target.value;compute();toast('角色与面试安排已同步更新');}catch(error){config=previous;renderStaff();toast(error.message);}};
+  $('staffTable').onchange=e=>{const key=e.target.dataset.roleKey;if(!key)return;try{commitConfig({...config,overrides:{...config.overrides,[key]:e.target.value}});toast('角色与面试安排已同步更新');}catch(error){renderStaff();toast(error.message);}};
+  $('scheduleTable').onclick=e=>{const button=e.target.closest('[data-adjust]');if(button)openAssignment(button.dataset.adjust);};
+  $('cancelAssignment').onclick=$('closeAssignment').onclick=()=>$('assignmentDialog').close();
+  $('assignmentSession').onchange=()=>{assignmentInterviewers($('assignmentInterviewer').value);$('assignmentError').textContent='';suggestAssignment();};
+  $('assignmentInterviewer').onchange=()=>{$('assignmentError').textContent='';suggestAssignment();};
+  $('suggestAssignment').onclick=suggestAssignment;
+  $('assignmentForm').onsubmit=e=>{e.preventDefault();try{
+    const adjustment={session:$('assignmentSession').value,interviewer:$('assignmentInterviewer').value,startSeconds:Adjustments.seconds($('assignmentStart').value),endSeconds:Adjustments.seconds($('assignmentEnd').value)};
+    commitConfig({...config,adjustments:{...config.adjustments,[assignmentEditing.id]:adjustment}});$('assignmentDialog').close();toast('调整已保存，可直接导出 Excel');
+  }catch(error){$('assignmentError').textContent=error.message;}};
+  $('resetOneAssignment').onclick=()=>{try{const adjustments={...config.adjustments};delete adjustments[assignmentEditing.id];commitConfig({...config,adjustments});$('assignmentDialog').close();toast('已恢复此人的自动安排');}catch(error){$('assignmentError').textContent=error.message;}};
+  $('resetAdjustments').onclick=()=>askReplace(`恢复 ${result.manualCount} 位候选人的自动安排？可撤销。`,()=>{commitConfig({...config,adjustments:{}});toast('已恢复自动排班');});
   $('exportAll').onclick=()=>csv(rosterKind==='candidates'?'候选人名单.csv':'工作人员名单.csv',raw[rosterKind].map((r,i)=>r.map((v,j)=>i&&rosterKind==='candidates'&&j===0?'\t'+v:v)));
   $('exportExcel').onclick=()=>{
     const button=$('exportExcel');button.disabled=true;
@@ -284,7 +331,7 @@
     renderRoster();
   };
   $('deleteSelected').onclick=()=>deleteRecords([...selected]);
-  $('undoEdit').onclick=()=>{const last=history.pop();if(!last)return;applyRaw(last.raw,false,false,last.config);toast('已撤销上一步');};
+  $('undoEdit').onclick=$('undoSchedule').onclick=()=>{const last=history.at(-1);if(!last)return;try{applyRaw(last.raw,false,false,last.config);history.pop();renderSchedule();renderRoster();toast('已撤销上一步');}catch(error){toast(error.message);}};
   $('cancelRecord').onclick=$('closeRecord').onclick=()=>$('recordDialog').close();
   $('cancelConfirm').onclick=()=>{$('confirmDialog').close();confirmAction=null;};
   $('acceptConfirm').onclick=()=>{const action=confirmAction;confirmAction=null;$('confirmDialog').close();if(action)try{action();}catch(e){toast(e.message);}};
@@ -295,13 +342,13 @@
   $('recordForm').onsubmit=e=>{e.preventDefault();try{
     readWindowDraft();const windowText=key=>editing.windows[key].map(w=>{if(!w.date||!w.start||!w.end)throw Error('请填写完整的日期和起止时间。');return `${w.date} ${w.start}-${w.end}`;}).join('、');
     const row=rosterKind==='candidates'?[$('editId').value.trim(),$('editName').value.trim(),windowText('interview'),$('editMode').value]:[$('editName').value.trim(),$('editDepartment').value.trim(),windowText('interview'),windowText('field'),editing.key||'staff-'+crypto.randomUUID()];
-    applyRaw(Roster.change(raw,rosterKind,editing.key,row));$('recordDialog').close();toast('已保存并更新排班');
+    applyRaw(Roster.change(raw,rosterKind,editing.key,row),false,true,null,rosterKind==='candidates'&&editing.key?{[editing.key]:row[0]}:{});$('recordDialog').close();toast('已保存并更新排班');
   }catch(error){$('recordError').textContent=error.message;}};
   try{
     raw=Roster.canonical(raw);
     if(location.protocol!=='file:')try{
       const cached=JSON.parse(localStorage.getItem(storageKey)||'null');
-      if(cached){const next=Roster.canonical(cached.raw),nd=Planner.normalize(next.candidates,next.staff,next.sources,next.year),nr=Planner.solve(nd,cached.config);if(Planner.validate(nd,nr).length)throw Error('缓存无效');raw=next;config=nr.config;}
+      if(cached){const next=Roster.canonical(cached.raw),nd=Planner.normalize(next.candidates,next.staff,next.sources,next.year),nr=calculate(nd,cached.config);raw=next;config=nr.config;}
     }catch{toast('本机记录无法读取，请重新导入或打开备份');}
     data=Planner.normalize(raw.candidates,raw.staff,raw.sources,raw.year);
     if(!config)config=freshConfig();$('importYear').value=raw.year;

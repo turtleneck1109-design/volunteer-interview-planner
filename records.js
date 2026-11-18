@@ -25,7 +25,7 @@
     next[kind]=next[kind].filter((r,i)=>i===0||!ids.has(r[col]));return canonical(next);
   }
   // Retain disabled windows even when a changed availability splits a session.
-  function reconcile(config,before,after){
+  function reconcile(config,before,after,renamedCandidates={}){
     const disabled=before.sessions.filter(s=>!config.enabled.includes(s.id));
     const enabled=after.sessions.filter(s=>!disabled.some(old=>old.date===s.date&&old.start<s.end&&old.end>s.start)).map(s=>s.id);
     const overrides={};
@@ -33,7 +33,12 @@
       const role=config.overrides[`${p.id}|${s.id}`];
       if(role==='off'||role==='interview'&&p.interview.includes(s.id)||role==='field'&&p.field.includes(s.id))overrides[`${p.id}|${s.id}`]=role;
     }
-    return {...config,enabled,overrides};
+    const adjustments=Object.fromEntries(Object.entries(config.adjustments||{}).map(([id,a])=>[Object.hasOwn(renamedCandidates,id)?renamedCandidates[id]:id,a]).filter(([id])=>after.candidates.some(c=>c.id===id)).map(([id,a])=>{
+      const previous=before.sessions.find(s=>s.id===a.session);
+      const session=after.sessions.find(s=>s.date===previous?.date&&s.start*60<=a.startSeconds&&s.end*60>=a.endSeconds);
+      return [id,{...a,session:session?.id||a.session}];
+    }));
+    return {...config,enabled,overrides,adjustments};
   }
   root.Roster={headers,empty,canonical,change,remove,reconcile,windowsText};
   if(typeof module!=='undefined')module.exports=root.Roster;

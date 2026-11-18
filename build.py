@@ -45,7 +45,7 @@ def write_html(raw,out):
     here=Path(__file__).parent
     template=(here/'template.html').read_text()
     text=template.replace('/*__ENGINE__*/',(here/'scheduler.js').read_text()).replace('/*__ROSTER__*/',(here/'records.js').read_text()).replace('/*__EXCEL__*/',(here/'excel-template.js').read_text()+'\n'+(here/'excel-export.js').read_text()).replace('/*__APP__*/',(here/'app.js').read_text()).replace('__DATA__',json.dumps(raw,ensure_ascii=False).replace('<','\\u003c')).replace('__DEMO__',(here/'demo.json').read_text().replace('<','\\u003c'))
-    text=text.replace('/*__IMPORT_TEMPLATES__*/',(here/'import-templates.js').read_text())
+    text=text.replace('/*__IMPORT_TEMPLATES__*/',(here/'import-templates.js').read_text()).replace('/*__ADJUSTMENTS__*/',(here/'adjustments.js').read_text())
     Path(out).parent.mkdir(parents=True,exist_ok=True);Path(out).write_text(text)
     print(json.dumps({'output':str(Path(out).resolve()),'candidates':len(raw['candidates'])-1,'staff':len(raw['staff'])-1},ensure_ascii=False))
 if __name__=='__main__':
