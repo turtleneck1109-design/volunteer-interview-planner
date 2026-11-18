@@ -2,6 +2,7 @@
 node_modules/
 __pycache__/
 *.xlsx
+!templates/*.xlsx
 *.csv
 *.zip
 *.tar.gz

@@ -258,6 +258,11 @@
   }))]);
   $('exportHeat').onclick=exportHeat;
   $('saveHtml').onclick=()=>{const clone=document.documentElement.cloneNode(true);clone.querySelector('#toast').textContent='';download('面试排班_当前方案.html','<!DOCTYPE html>\n'+clone.outerHTML,'text/html;charset=utf-8');toast('已保存当前问卷与排班设置');};
+  for(const [id,kind] of [['candidateTemplate','candidates'],['staffTemplate','staff']])$(id).onclick=()=>{
+    const template=PlannerImportTemplates[kind];
+    download(template.name,Uint8Array.from(atob(template.base64),c=>c.charCodeAt(0)),'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    toast('模板已下载，填写方法见「填写说明」工作表');
+  };
   $('importFiles').onclick=async()=>{
     const a=$('candidateFile').files[0],b=$('staffFile').files[0];if(!a||!b){toast('请先选择两份 Excel');return;}
     const button=$('importFiles');button.disabled=true;button.textContent='识别中…';
