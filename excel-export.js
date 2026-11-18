@@ -2,14 +2,17 @@
 (function(root){
  'use strict';
  const template=typeof module!=='undefined'?require('./excel-template.js'):root.PlannerWorkbookTemplate;
+ const queryTemplate=typeof module!=='undefined'?require('./excel-query-template.js'):root.PlannerQueryTemplate;
+ const B=typeof module!=='undefined'?require('./batches.js'):root.Batches;
  const esc=v=>String(v??'').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
  const excelDate=date=>(Date.parse(date+'T00:00:00Z')-Date.UTC(1899,11,30))/86400000;
  function column(n){let out='';for(n++;n>0;n=Math.floor((n-1)/26))out=String.fromCharCode(65+(n-1)%26)+out;return out;}
  function makeRows(data,result){
+  result=B.apply(result);
   const sessions=new Map(result.sessions.map(s=>[s.id,s])),staff=new Map(data.staff.map(p=>[p.id,p]));
   const candidates=[...result.assignments,...result.unassigned].map(c=>{
    const s=sessions.get(c.session);
-   return [c.id,c.name,c.online?'线上':'线下',c.status,s?excelDate(s.date):null,s?c.start/1440:null,s?c.end/1440:null,s?c.duration:null,s?staff.get(c.interviewer).name:'',s?s.fieldStaff.map(p=>p.name).join('、'):'',c.reason||''];
+   return [c.id,c.name,c.online?'线上':'线下',c.status,s?excelDate(s.date):null,s?c.start/1440:null,s?c.end/1440:null,s?c.duration:null,s?staff.get(c.interviewer).name:'',s?s.fieldStaff.map(p=>p.name).join('、'):'',c.reason||'',c.arrivalLabel||'待安排',c.waitingRoom||''];
   });
   const interviewerRows=[],fieldRows=[];
   for(const s of result.sessions){
@@ -21,10 +24,12 @@
   }
   return [candidates,interviewerRows,fieldRows];
  }
- function worksheet(spec,rows,summary,intern){
-  const original=template.files[spec.path],prefix=original.match(/<x:sheetData>([\s\S]*?)<x:row r="5"/)[1].replace(/<x:row r="3"[\s\S]*?<\/x:row>/,`<x:row r="3" ht="24" customHeight="1"><x:c r="A3" s="7" t="inlineStr"><x:is><x:t xml:space="preserve">${esc(summary)}</x:t></x:is></x:c></x:row>`);
+ function worksheet(layout,spec,rows,summary,intern){
+  const first=spec.dataRow||5,header=spec.headerRow||4,original=layout.files[spec.path];
+  let prefix=original.match(new RegExp('<x:sheetData>([\\s\\S]*?)<x:row r="'+first+'"'))[1];
+  if(summary)prefix=prefix.replace(/<x:row r="3"[\s\S]*?<\/x:row>/,`<x:row r="3" ht="24" customHeight="1"><x:c r="A3" s="7" t="inlineStr"><x:is><x:t xml:space="preserve">${esc(summary)}</x:t></x:is></x:c></x:row>`);
   const body=rows.map((row,i)=>{
-   const r=i+5,cells=row.map((v,j)=>{
+   const r=i+first,cells=row.map((v,j)=>{
     const ref=column(j)+r,style=spec.styles[j];
     if(v===null||v===undefined||v==='')return `<x:c r="${ref}" s="${style}"/>`;
     if(typeof v==='number'){if(!Number.isFinite(v))throw Error('导出数据含无效数值');return `<x:c r="${ref}" s="${style}" t="n"><x:v>${v}</x:v></x:c>`;}
@@ -34,8 +39,8 @@
    const lines=Math.max(1,...row.map((v,j)=>typeof v==='string'?Math.ceil([...v].reduce((n,c)=>n+(c.charCodeAt(0)>255?2:1),0)/Math.max(1,spec.widths[j]-2)):1));
    return `<x:row r="${r}" ht="${Math.max(26,lines*17+6)}" customHeight="1">${cells}</x:row>`;
   }).join('');
-  const last=column(spec.headers.length-1)+(rows.length+4);
-  return original.replace(/<x:sheetData>[\s\S]*?<\/x:sheetData>/,`<x:sheetData>${prefix}${body}</x:sheetData><x:autoFilter ref="A4:${last}"/>`).replace('</x:sheetPr>',`</x:sheetPr><x:dimension ref="A1:${last}"/>`);
+  const last=column(spec.headers.length-1)+Math.max(header,rows.length+first-1);
+  return original.replace(/<x:sheetData>[\s\S]*?<\/x:sheetData>/,`<x:sheetData>${prefix}${body}</x:sheetData><x:autoFilter ref="A${header}:${last}"/>`).replace('</x:sheetPr>',`</x:sheetPr><x:dimension ref="A1:${last}"/>`);
  }
  const crcTable=Array.from({length:256},(_,i)=>{for(let k=0;k<8;k++)i=(i&1)?0xedb88320^(i>>>1):i>>>1;return i>>>0;});
  function crc32(bytes){let crc=0xffffffff;for(const b of bytes)crc=crcTable[(crc^b)&255]^(crc>>>8);return (crc^0xffffffff)>>>0;}
@@ -51,16 +56,21 @@
   const out=new Uint8Array(offset+centralSize+22);let at=0;for(const p of [...local,...central,end]){out.set(p,at);at+=p.length;}return out;
  }
  function bytes(data,result){
-  const rows=makeRows(data,result),files={...template.files},summaries=[
+  const rows=makeRows(data,result),summaries=[
    `当前方案：共 ${result.total} 人，已安排 ${result.matched} 人，待安排 ${result.unassigned.length} 人；参考 ${result.config.duration} 分钟，平均实际 ${result.averageDuration==null?'—':result.averageDuration.toFixed(2)} 分钟 / 人。`,
    `当前方案：共 ${rows[1].length} 个面试官班次；候选人逐人明细见“候选人面试安排”。`,
    `当前方案：共 ${rows[2].length} 个场务班次；场务按生成时段完整值班。`
   ];
+  return workbookBytes(template,rows,summaries);
+ }
+ function queryBytes(data,result){return workbookBytes(queryTemplate,[B.queryRows(result)],[]);}
+ function workbookBytes(layout,rows,summaries){
+  const files={...layout.files};
   const strings=[],indices=new Map();let stringCount=0;
   const intern=value=>{stringCount++;if(!indices.has(value)){indices.set(value,strings.length);strings.push(value);}return indices.get(value);};
-  template.sheets.forEach((s,i)=>files[s.path]=worksheet(s,rows[i],summaries[i],intern));
+  layout.sheets.forEach((s,i)=>files[s.path]=worksheet(layout,s,rows[i],summaries[i],intern));
   files['xl/sharedStrings.xml']=`<?xml version="1.0" encoding="utf-8"?><x:sst xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${stringCount}" uniqueCount="${strings.length}">${strings.map(s=>`<x:si><x:t xml:space="preserve">${esc(s)}</x:t></x:si>`).join('')}</x:sst>`;
   return zip(files);
  }
- root.PlannerExcel={bytes,makeRows};if(typeof module!=='undefined')module.exports=root.PlannerExcel;
+ root.PlannerExcel={bytes,makeRows,queryBytes};if(typeof module!=='undefined')module.exports=root.PlannerExcel;
 })(typeof globalThis!=='undefined'?globalThis:this);
