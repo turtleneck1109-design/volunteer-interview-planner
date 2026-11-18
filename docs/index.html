@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>面试排班 · 志愿者工作台</title>
+<meta name="description" content="导入问卷、编辑名单、一键生成志愿者面试排班，支持 Excel 导出。">
+<style>
+:root{--paper:#f5f7fb;--white:#fff;--ink:#172b46;--muted:#77869b;--line:#e5eaf2;--navy:#132d4d;--accent:#2563eb;--accent-light:#eff5ff;--green:#2862a1;--teal:#4c91d5;--radius:14px}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+button,input,select,textarea{font:inherit}button,input,select,textarea{border-radius:8px}button{cursor:pointer;border:1px solid var(--line);background:white;color:var(--ink);padding:8px 14px;white-space:nowrap}button:hover{background:#f1f5fb}button:disabled{opacity:.45;cursor:not-allowed}button.primary{background:var(--accent);border-color:var(--accent);color:white;font-weight:600}button.primary:hover{background:#1d4ed8}button.small{font-size:12px;padding:5px 10px}button.text{border:0;background:transparent;color:var(--accent);padding:4px 6px}button.danger{color:#b94343}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid #a4c7ff;outline-offset:2px}
+input,select,textarea{border:1px solid #dce3ee;background:white;padding:8px 10px;color:var(--ink);max-width:100%;min-width:0}input[type=checkbox]{width:17px;height:17px;accent-color:var(--accent);margin:0;flex-shrink:0}h1,h2,h3,p{margin:0}h1{font-size:25px;letter-spacing:-.5px;line-height:1.4}h2{font-size:17px;font-weight:650}h3{font-size:14px}a{color:var(--accent)}small,.muted{color:var(--muted)}[hidden]{display:none!important}.flex{display:flex;align-items:center;gap:8px}.app{display:flex;min-height:100vh}
+.sidebar{position:fixed;inset:0 auto 0 0;width:204px;padding:30px 18px;background:var(--navy);color:white;display:flex;flex-direction:column}.brand{display:flex;align-items:center;gap:10px;padding:0 12px}.brand-icon{display:grid;place-items:center;width:34px;height:34px;background:#3575e9;border-radius:10px;font-size:22px}.brand strong{font-size:17px}.brand small{display:block;color:#8fa6c0;font-size:9px;letter-spacing:1.5px}.nav{display:flex;flex-direction:column;gap:7px;margin-top:40px}.nav button{display:flex;gap:12px;align-items:center;border:0;background:transparent;color:#a8bbd0;padding:12px 15px;text-align:left}.nav button.active{background:#ffffff13;color:white}.nav button:hover{background:#ffffff0b}.nav-icon{width:18px;font-size:17px;text-align:center}.side-bottom{margin-top:auto;color:#91a8c2;font-size:11px;padding:20px 12px}.side-bottom a{color:#b4c9e2;text-decoration:none}.main{margin-left:204px;width:calc(100% - 204px);padding:30px 36px;max-width:1800px;min-width:0}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:26px}.topbar p{font-size:12px;color:var(--muted);margin-top:5px}.top-actions{display:flex;gap:10px;align-items:center}.pill{color:#6082ac;background:#eaf1fb;border-radius:20px;padding:5px 10px;font-size:11px}.pageintro{display:flex;justify-content:flex-end;margin-bottom:12px;font-size:11px;color:var(--muted)}.section{display:none}.section.active{display:block}.card{background:white;border:1px solid var(--line);border-radius:var(--radius);padding:22px;min-width:0}.card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:18px}.card-head p{font-size:12px;color:var(--muted);margin-top:4px}.bottom-card{margin-top:20px}.kicker{color:var(--accent);font-size:10px;letter-spacing:1px;margin-bottom:5px}
+.settings{border:1px solid var(--line);background:white;border-radius:12px;margin-bottom:20px;padding:16px 20px}.settings summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:16px;font-size:13px}.settings summary::-webkit-details-marker{display:none}.settings summary strong{font-weight:550;white-space:nowrap}.settings summary>span{color:var(--muted);font-size:11px;text-align:right}.settings-body{padding-top:20px}.settings-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}.settings-grid label{font-size:12px;color:var(--muted);min-width:0}.settings-grid input{width:100%;margin-top:6px}.session-toggle{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:18px 0}.session-toggle label{display:grid;grid-template-columns:17px minmax(0,1fr);align-items:center;gap:10px;padding:11px 12px;border:1px solid var(--line);border-radius:8px;cursor:pointer;min-width:0}.session-toggle label:has(input:checked){background:var(--accent-light);border-color:#c8dcfc}.session-text{display:grid;gap:1px;line-height:1.5;white-space:nowrap}.session-text strong{font-size:12px;font-weight:550}.session-text>span{font-size:11px;color:var(--muted)}.settings-footer{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.settings-footer>span{font-size:11px;color:var(--muted)}.settings-footer .flex{flex-wrap:wrap}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:20px}.metric{padding:18px;background:white;border:1px solid var(--line);border-radius:12px}.metric label{font-size:12px;color:var(--muted)}.metric label span{display:none}.metric .value{font-size:32px;font-weight:650;line-height:1.4;margin:6px 0;font-variant-numeric:tabular-nums}.metric em{font-style:normal;font-size:12px;font-weight:400;color:var(--muted);margin-left:6px}.metric .foot{font-size:11px;color:var(--muted)}.metric .foot strong{color:var(--green);font-weight:500}.grid-main{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(275px,1fr);gap:20px}
+.segmented{display:flex;gap:3px;padding:3px;background:#f2f5fa;border-radius:8px}.segmented button{border:0;background:transparent;color:var(--muted);font-size:11px;padding:6px 10px}.segmented button.active{background:white;color:var(--accent);box-shadow:0 1px 3px #1c375010}.heat-scroll{overflow:auto}.heatmap{display:grid;gap:8px}.heat-head{text-align:center;color:#66768d;font-size:12px;margin-bottom:8px}.heat-head small{margin-left:5px;font-size:10px}.heat-axis{font-size:11px;align-self:center;color:var(--muted)}.heat-axis span{display:block;font-size:10px}.heatcell{min-height:110px;border:0;padding:15px;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;position:relative;text-align:left}.heatcell:after{content:'↗';position:absolute;top:9px;right:11px;opacity:.4}.heatcell b{font-size:27px;line-height:1.4;font-weight:600}.heatcell b small{font-size:10px;font-weight:400;color:inherit;margin-left:4px}.heatcell>span{font-size:10px;opacity:.8;margin-top:5px}.heatcell.off{background:#f1f3f5;color:#929da8}.heat-legend{display:flex;align-items:center;gap:7px;justify-content:flex-end;margin-top:15px;font-size:10px;color:var(--muted)}.gradient{width:80px;height:5px;background:linear-gradient(90deg,#2563eb,#bfdbfe,#eff6ff);border-radius:10px}.formula,.cap-note{font-size:11px;color:var(--muted);margin-top:16px;line-height:1.8}.formula b{font-weight:500}.capacity-list{display:flex;flex-direction:column;gap:17px}.capacity-title,.capacity-meta{display:flex;justify-content:space-between;gap:8px;font-size:11px}.capacity-title span,.capacity-meta{color:var(--muted)}.capacity-track{height:5px;background:#f1f4f9;border-radius:5px;margin:6px 0}.capacity-track i{height:100%;display:block;background:#5489ec;border-radius:5px}.capacity-meta{font-size:10px}
+.notice{padding:12px 16px;background:#fff7e9;color:#916428;border:1px solid #f3e3c3;border-radius:10px;font-size:12px;margin-bottom:18px}.notice.ok{background:#edf4ff;border-color:#d9e7fc;color:#345e91}.notice details{margin-top:5px}.notice summary{cursor:pointer}.notice-icon{display:none}.table-wrap{overflow:auto}table{border-collapse:collapse;width:100%;font-size:12px;white-space:nowrap}th{text-align:left;padding:11px 12px;background:#f7f9fc;color:var(--muted);font-weight:500;font-size:11px;border-bottom:1px solid var(--line)}td{padding:13px 12px;border-bottom:1px solid #edf1f6;color:#52647b}td strong{color:var(--ink);font-weight:500}tbody tr:hover{background:#fafcff}.id{font-size:11px;color:#8190a4;font-variant-numeric:tabular-nums}.tag{display:inline-block;padding:2px 7px;border-radius:5px;background:#f0f3f7;color:#6b7e95;font-size:10px}.tag.online,.tag.good{background:#edf4ff;color:#3f76b2}.tag.warn{background:#fff3df;color:#a57129}.empty{text-align:center;padding:38px 15px;color:var(--muted);font-size:12px;grid-column:1/-1}.toolbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:16px 0}.search{flex:1;min-width:180px;max-width:310px}.pagination{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:11px;color:var(--muted);margin-top:16px}.controls{display:flex;align-items:center;gap:8px}.role-label{display:block;color:var(--muted);font-size:10px;margin-top:4px}.staff-grid select{max-width:110px;font-size:11px;padding:5px}.staff-chart{display:flex;flex-direction:column;gap:13px}.work-row{display:grid;grid-template-columns:75px 1fr 110px;gap:10px;align-items:center;font-size:12px}.work-track{height:12px;display:flex;background:#f4f6fa;border-radius:5px;overflow:hidden}.work-track i{background:#5489ec}.work-track i.field{background:#b7cfef}.work-row .number{text-align:right;font-size:11px;color:var(--muted)}
+.import-card .card-head{margin-bottom:14px}.data-info{display:grid;grid-template-columns:1fr 1fr;gap:14px}.source-box{display:flex;align-items:center;gap:12px;min-width:0;border:1px dashed #d2dded;border-radius:10px;padding:16px;background:#fafcff}.source-icon{width:38px;height:42px;background:#e8f0fd;color:#4f7bc6;display:grid;place-items:center;border-radius:8px;font-size:17px;flex-shrink:0}.source-info{min-width:0;flex:1}.source-info h3{font-size:13px}.source-info p{color:var(--muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:3px}.file-label{cursor:pointer;position:relative;color:var(--accent);font-size:12px;white-space:nowrap;padding:7px 10px;background:white;border:1px solid #dae5f6;border-radius:7px}.file-label input{position:absolute;inset:0;opacity:0;width:100%;cursor:pointer}.file-label:focus-within{outline:2px solid #93c5fd}.import-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px}.year-field{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}.year-field input{width:90px;padding:6px 8px}.data-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.statusline{font-size:11px;color:var(--green);margin-top:12px}.roster-tabs{display:flex;gap:22px;border-bottom:1px solid var(--line);margin-bottom:17px}.roster-tabs button{border:0;background:none;border-radius:0;padding:0 2px 12px;color:var(--muted);font-weight:500}.roster-tabs button.active{color:var(--accent);box-shadow:0 2px var(--accent)}.roster-toolbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:15px}.roster-toolbar .search{margin-right:auto}.time-chips{max-width:300px;display:flex;gap:4px;flex-wrap:wrap;white-space:normal}.time-chips span{font-size:10px;background:#f2f6fc;color:#647d9b;border-radius:4px;padding:3px 6px}.row-actions{display:flex;gap:2px}.row-actions button{font-size:11px}.check-cell{width:35px;padding-right:4px}.roster-note{font-size:11px;color:var(--muted)}.tools-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:18px}.secondary-tools{display:flex;gap:7px;flex-wrap:wrap}.help-details{margin-top:20px;color:var(--muted);font-size:12px}.help-details>summary{cursor:pointer;padding:12px 0;color:#60738e}.method-list{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:15px 0}.method-list h3{font-size:12px;color:#4e6480;margin-bottom:5px}.method-list p{font-size:11px;line-height:1.8}.footnote{display:flex;justify-content:space-between;gap:10px;margin-top:24px;font-size:10px;color:#8a99ac}.footnote a{text-decoration:none}
+dialog{border:1px solid var(--line);border-radius:16px;padding:0;width:min(650px,calc(100% - 28px));max-height:88vh;color:var(--ink);box-shadow:0 24px 90px #122b4933}dialog::backdrop{background:#12223d55;backdrop-filter:blur(3px)}.dialog-head{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--line)}.dialog-head h2{font-size:18px}.dialog-body{padding:22px 24px;max-height:62vh;overflow:auto}.dialog-foot{display:flex;justify-content:flex-end;gap:8px;padding:16px 24px;border-top:1px solid var(--line)}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}.form-grid label{font-size:12px;color:#667c98}.form-grid input,.form-grid select{display:block;width:100%;margin-top:5px}.window-group{margin-top:22px}.window-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}.window-head h3{font-size:13px}.window-rows{display:grid;gap:8px}.window-row{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr) 30px;gap:7px;align-items:end}.window-row label{font-size:10px;color:var(--muted);min-width:0}.window-row input{display:block;width:100%;margin-top:3px;font-size:12px;padding:7px}.window-row button{padding:5px;font-size:16px;height:35px}.window-empty{color:var(--muted);font-size:11px}.form-error{color:#b84141;font-size:12px;white-space:pre-wrap;margin-top:15px}.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:50;background:#173b62;color:white;border-radius:9px;padding:10px 18px;box-shadow:0 4px 24px #1d426c22;font-size:12px;max-width:90vw}.toast:empty{display:none}#loading{padding:30px;color:var(--muted)}.ready #loading{display:none}
+@media(min-width:1500px){.main{padding:35px 46px}.session-toggle{grid-template-columns:repeat(6,minmax(0,1fr))}}
+@media(max-width:1180px){.sidebar{width:180px;padding:28px 13px}.main{margin-left:180px;width:calc(100% - 180px);padding:25px}.grid-main{grid-template-columns:1fr}.capacity-list{display:grid;grid-template-columns:1fr 1fr;gap:18px}.top-actions .pill{display:none}.source-box{flex-wrap:wrap}.source-info{flex-basis:60%}}
+@media(max-width:760px){.app{display:block}.sidebar{position:static;width:100%;display:block;padding:15px 17px}.brand{padding:0}.brand strong{font-size:15px}.brand small,.side-bottom{display:none}.brand-icon{width:30px;height:30px;font-size:19px}.nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin-top:15px}.nav button{padding:9px 3px;justify-content:center;gap:5px;font-size:11px;flex-direction:column}.nav-icon{font-size:15px}.main{margin:0;width:100%;padding:22px 16px}.topbar{flex-wrap:wrap;margin-bottom:18px;gap:13px}h1{font-size:23px}.top-actions{margin-left:auto;gap:7px}.top-actions button{font-size:12px;padding:7px 10px}.pageintro{font-size:10px}.settings{padding:14px}.settings summary{flex-wrap:wrap;gap:8px}.settings summary>span{text-align:left;font-size:10px}.settings-grid{grid-template-columns:1fr 1fr;gap:13px}.settings-grid label{font-size:11px}.session-toggle{grid-template-columns:repeat(2,minmax(0,1fr))}.session-toggle label{gap:7px;padding:10px}.settings-footer{align-items:flex-start}.metrics{grid-template-columns:1fr 1fr;gap:10px}.metric{padding:15px}.metric .value{font-size:29px}.card{padding:17px}.card-head{flex-wrap:wrap}.heatcell{min-height:100px}.data-info{grid-template-columns:1fr}.source-box{padding:13px;flex-wrap:nowrap}.source-info{flex-basis:auto}.source-icon{width:32px;height:36px}.import-footer{gap:14px}.data-actions{width:100%;justify-content:flex-end}.roster-toolbar .search{max-width:none;flex-basis:100%;width:100%}.capacity-list{grid-template-columns:1fr}.roster-tabs{gap:20px}.roster-tabs button{font-size:13px}.method-list{grid-template-columns:1fr}.work-row{grid-template-columns:70px 1fr 95px}.footnote{flex-wrap:wrap}.dialog-head{padding:17px}.dialog-body{padding:17px}.dialog-foot{padding:14px 17px}.window-row{grid-template-columns:minmax(0,1.2fr) minmax(0,.9fr) minmax(0,.9fr) 24px;gap:5px}.window-row input{padding:7px 4px;font-size:11px}.heat-legend{flex-wrap:wrap}.pagination{flex-wrap:wrap}}
+@media(max-width:380px){.session-toggle{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.file-label{padding:6px}.source-icon{display:none}}
+@media print{.sidebar,.top-actions,.settings,.toolbar,.pagination,.tools-row,.footnote,.import-card,.roster-toolbar{display:none!important}.main{margin:0;width:100%;padding:0}.section{display:none}.section.active{display:block}.card,.metric{break-inside:avoid;box-shadow:none}.heatcell{print-color-adjust:exact;-webkit-print-color-adjust:exact}.grid-main{display:block}.grid-main>.card{margin-bottom:20px}body{background:white}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+ <div class="brand"><span class="brand-icon">▦</span><div><strong>面试排班</strong><small id="brandYear">VOLUNTEER PLANNER</small></div></div>
+ <nav class="nav" aria-label="主导航">
+  <button data-page="overview" class="active"><span class="nav-icon" aria-hidden="true">▦</span>排班总览</button>
+  <button data-page="schedule"><span class="nav-icon" aria-hidden="true">▤</span>面试安排</button>
+  <button data-page="staff"><span class="nav-icon" aria-hidden="true">♧</span>人员排班</button>
+  <button data-page="data"><span class="nav-icon" aria-hidden="true">☷</span>名单管理</button>
+ </nav>
+ <div class="side-bottom">先整理名单，再安排面试。<br><a href="https://github.com/turtleneck1109-design/volunteer-interview-planner" target="_blank" rel="noopener">GitHub ↗</a></div>
+</aside>
+<main class="main">
+ <header class="topbar"><div><h1 id="pageTitle">排班总览</h1><p id="introText">覆盖人数、面试时长，一眼看清。</p></div><div class="top-actions"><span class="pill" id="saveStatus">仅在本机处理</span><button id="importShortcut">导入名单</button><button class="primary" id="exportExcel">导出 Excel ↓</button></div></header>
+ <div id="loading">正在生成排班…</div><div class="pageintro"><span id="periodLabel"></span></div>
+ <details class="settings" id="settings"><summary><strong>排班设置 ⌄</strong><span id="settingsSummary"></span></summary>
+  <form class="settings-body" id="settingsForm">
+   <div class="settings-grid"><label>参考时长 / 分钟<input id="duration" type="number" min="1" max="120" step="1" value="5" required></label><label>面试间隔 / 分钟<input id="gap" type="number" min="0" max="30" step="1" value="0" required></label><label>末尾预留 / 分钟<input id="reserve" type="number" min="0" max="119" step="1" value="0" required></label><label>每场场务 / 人<input id="field" type="number" min="0" max="15" step="1" value="1" required></label></div>
+   <div class="session-toggle" id="sessionToggles"></div>
+   <div class="settings-footer"><span>优先安排全部候选人，必要时缩短面试。</span><div class="flex"><button type="button" id="resetSettings">恢复默认</button><button type="submit" class="primary">应用设置</button></div></div>
+  </form>
+ </details>
+ <div id="globalNotice" aria-live="polite"></div>
+ <section class="section active" id="overview">
+  <div class="metrics" id="metrics"></div>
+  <div class="grid-main">
+   <article class="card"><div class="card-head"><div><h2>平均面试时长</h2><p>点击时段查看安排</p></div><div class="segmented" role="group" aria-label="热力图指标"><button data-metric="actual" class="active">实际时长</button><button data-metric="budget">可用时间</button></div></div><div class="heat-scroll"><div class="heatmap" id="heatmap"></div></div><div class="heat-legend"><span>较短</span><i class="gradient"></i><span>达到参考</span><button class="text" id="exportHeat">下载图表 ↗</button></div><p class="formula" id="heatFormula"></p></article>
+   <article class="card"><div class="card-head"><div><h2>时段安排</h2><p>已安排 / 参考容量</p></div><span class="tag" id="slotBadge"></span></div><div class="capacity-list" id="capacityList"></div><p class="cap-note" id="capacityNote"></p></article>
+  </div>
+  <article class="card bottom-card"><div class="card-head"><h2>近期面试</h2><button class="small" id="viewAll">查看全部 →</button></div><div class="table-wrap" id="previewTable"></div></article>
+ </section>
+ <section class="section" id="schedule"><article class="card">
+  <div class="card-head"><div><h2>候选人安排</h2><p id="scheduleCaption"></p></div><button class="small" id="exportFiltered">导出筛选结果</button></div>
+  <div class="toolbar"><input class="search" id="search" type="search" placeholder="搜索姓名、学号、面试官" aria-label="搜索面试安排"><select id="sessionFilter" aria-label="筛选时段"><option value="all">全部时段</option></select><select id="modeFilter" aria-label="筛选面试方式"><option value="all">全部方式</option><option value="online">线上</option><option value="offline">线下</option></select><select id="statusFilter" aria-label="筛选安排状态"><option value="all">全部状态</option><option value="assigned">已安排</option><option value="pending">待安排</option></select></div>
+  <div class="table-wrap" id="scheduleTable"></div><div class="pagination"><span id="paginationText"></span><div class="controls"><button class="small" id="prevPage" aria-label="上一页面试安排">←</button><span id="pageNumber"></span><button class="small" id="nextPage" aria-label="下一页面试安排">→</button></div></div>
+ </article></section>
+ <section class="section" id="staff">
+  <article class="card"><div class="card-head"><div><h2>面试官与场务</h2><p>点击角色可调整当场分工</p></div><button class="small" id="exportStaff">导出人员排班</button></div><div class="table-wrap staff-grid" id="staffTable"></div></article>
+  <article class="card bottom-card"><div class="card-head"><h2>工作量</h2><span class="muted" style="font-size:11px"><span style="color:#5489ec">■ 面试</span>　<span style="color:#abc8ef">■ 场务</span></span></div><div class="staff-chart" id="staffChart"></div></article>
+ </section>
+ <section class="section" id="data">
+  <article class="card import-card">
+   <div class="card-head"><div><h2>导入问卷</h2><p>选择两份 Excel，识别后可直接编辑名单。</p></div><button class="text small" id="restoreData">试用示例</button></div>
+   <div class="data-info">
+    <div class="source-box"><div class="source-icon" aria-hidden="true">▤</div><div class="source-info"><h3>候选人问卷</h3><p id="candidateSource">尚未导入</p></div><label class="file-label">选择文件<input type="file" accept=".xlsx" id="candidateFile" aria-label="选择候选人 Excel"></label></div>
+    <div class="source-box"><div class="source-icon" aria-hidden="true">☷</div><div class="source-info"><h3>工作人员问卷</h3><p id="staffSource">尚未导入</p></div><label class="file-label">选择文件<input type="file" accept=".xlsx" id="staffFile" aria-label="选择工作人员 Excel"></label></div>
+   </div>
+   <div class="import-footer"><label class="year-field">面试年份<input id="importYear" type="number" min="2000" max="2100" step="1" value="2026"></label><div class="data-actions"><button id="importFiles" class="primary">识别名单</button></div></div>
+   <p class="statusline" id="dataStatus" aria-live="polite"></p>
+  </article>
+  <article class="card bottom-card">
+   <div class="roster-tabs" role="group" aria-label="名单类型"><button data-roster="candidates" class="active" id="candidateTab">候选人 · 0</button><button data-roster="staff" id="staffTab">工作人员 · 0</button></div>
+   <div class="roster-toolbar"><input id="rosterSearch" class="search" type="search" placeholder="搜索姓名或编号" aria-label="搜索名单"><button id="undoEdit" class="small" disabled>撤销</button><button id="deleteSelected" class="small danger" hidden>删除所选</button><button id="addRecord" class="primary small">＋ 新增候选人</button></div>
+   <div id="rosterTable" class="table-wrap"></div>
+   <div class="pagination"><span id="rosterCount"></span><div class="controls"><button class="small" id="rosterPrev" aria-label="上一页名单">←</button><span id="rosterPage"></span><button class="small" id="rosterNext" aria-label="下一页名单">→</button></div></div>
+   <div class="tools-row"><span class="roster-note">修改后自动重排</span><div class="secondary-tools"><button class="text small" id="saveHtml">保存当前网页</button><button class="text small" id="exportAll">导出名单 CSV</button><button class="text small danger" id="clearData">清空名单</button></div></div>
+  </article>
+  <details class="help-details"><summary>使用说明与排班规则</summary><div class="method-list">
+   <div><h3>导入格式</h3><p>读取 .xlsx 首张表。候选人需有学号、姓名、面试时间和线上选项（是/否）；工作人员需有姓名、面试官时间和场务时间。多个时段用顿号或逗号分隔。</p></div>
+   <div><h3>覆盖优先</h3><p>5 分钟是参考。先最大化可安排人数，再尽量接近参考时长，精确到秒。同一场时长相同，一人一位面试官；时间不重叠，场务不兼任。</p></div>
+   <div><h3>时间口径</h3><p>实际时长 = 总面试分钟 ÷ 已安排人数。可用时间 =（面试官人数 × 可用分钟 − 间隔）÷ 已安排人数。无人时显示“—”。原时间有重叠时会拆成不重叠场次。</p></div>
+   <div><h3>保存与导出</h3><p>名单只在本机浏览器处理和保存，不会上传服务器。Excel 分为候选人、面试官、场务三张表。保存当前网页可备份名单与设置；导入和修改均可撤销，刷新后撤销记录清空。</p></div>
+  </div></details>
+ </section>
+ <footer class="footnote"><span id="footerBrand">志愿者面试工作台</span><span id="footerStatus"></span></footer>
+</main></div>
+<dialog id="recordDialog" aria-labelledby="recordTitle">
+ <form id="recordForm">
+  <div class="dialog-head"><h2 id="recordTitle">编辑候选人</h2><button type="button" class="text" id="closeRecord" aria-label="关闭编辑">×</button></div>
+  <div class="dialog-body">
+   <div class="form-grid"><label>姓名<input id="editName" required maxlength="80" autocomplete="off"></label><label id="candidateIdField">编号 / 学号<input id="editId" required maxlength="80" autocomplete="off"></label><label id="staffDepartmentField" hidden>部门<input id="editDepartment" maxlength="120"></label><label id="candidateModeField">面试方式<select id="editMode"><option value="否">线下</option><option value="是">线上</option></select></label></div>
+   <div id="editorWindows"></div><p id="recordError" class="form-error" role="alert"></p>
+  </div>
+  <div class="dialog-foot"><button type="button" id="cancelRecord">取消</button><button class="primary" type="submit">保存并重排</button></div>
+ </form>
+</dialog>
+<dialog id="confirmDialog" aria-labelledby="confirmTitle"><div class="dialog-head"><h2 id="confirmTitle">确认操作</h2></div><div class="dialog-body"><p id="confirmText"></p></div><div class="dialog-foot"><button id="cancelConfirm">取消</button><button id="acceptConfirm" class="primary">确认</button></div></dialog>
+<div class="toast" id="toast" role="status"></div>
+<script id="embedded-data" type="application/json">{"candidates": [["学号", "姓名", "面试时间", "线上面试"]], "staff": [["姓名", "部门", "面试官时间", "场务时间", "工作人员编号"]], "sources": [], "year": 2026}</script>
+<script id="embedded-config" type="application/json">null</script>
+<script id="embedded-demo" type="application/json">{
+  "candidates": [
+    [
+      "学号",
+      "姓名",
+      "面试时间",
+      "线上面试"
+    ],
+    [
+      "DEMO001",
+      "候选人01",
+      "2027-01-16 14:00-16:00、2027-01-17 09:00-11:00",
+      "否"
+    ],
+    [
+      "DEMO002",
+      "候选人02",
+      "2027-01-17 09:00-11:00",
+      "否"
+    ],
+    [
+      "DEMO003",
+      "候选人03",
+      "2027-01-16 09:00-11:00、2027-01-16 14:00-16:00、2027-01-17 09:00-11:00",
+      "否"
+    ],
+    [
+      "DEMO004",
+      "候选人04",
+      "2027-01-16 14:00-16:00、2027-01-17 09:00-11:00",
+      "否"
+    ],
+    [
+      "DEMO005",
+      "候选人05",
+      "2027-01-17 09:00-11:00",
+      "是"
+    ],
+    [
+      "DEMO006",
+      "候选人06",
+      "2027-01-16 09:00-11:00、2027-01-16 14:00-16:00、2027-01-17 09:00-11:00",
+      "否"
+    ],
+    [
+      "DEMO007",
+      "候选人07",
+      "2027-01-16 14:00-16:00、2027-01-17 09:00-11:00",
+      "否"
+    ],
+    [
+      "DEMO008",
+      "候选人08",
+      "2027-01-17 09:00-11:00",
+      "否"
+    ],
+    [
+      "DEMO009",
+      "候选人09",
+      "2027-01-16 09:00-11:00、2027-01-16 14:00-16:00、2027-01-17 09:00-11:00",
+      "否"
+    ],
+    [
+      "DEMO010",
+      "候选人10",
+      "2027-01-16 14:00-16:00、2027-01-17 09:00-11:00",
+      "是"
+    ],
+    [
+      "DEMO011",
+      "候选人11",
+      "2027-01-17 09:00-11:00",
+      "否"
+    ],
+    [
+      "DEMO012",
+      "候选人12",
+      "2027-01-16 09:00-11:00、2027-01-16 14:00-16:00、2027-01-17 09:00-11:00",
+      "否"
+    ],
+    [
+      "DEMO013",
+      "候选人13",
+      "2027-01-16 14:00-16:00、2027-01-17 09:00-11:00",
+      "否"
+    ],
+    [
+      "DEMO014",
+      "候选人14",
+      "2027-01-17 09:00-11:00",
+      "否"
+    ],
+    [
+      "DEMO015",
+      "候选人15",
+      "2027-01-16 09:00-11:00、2027-01-16 14:00-16:00、2027-01-17 09:00-11:00",
+      "是"
+    ],
+    [
+      "DEMO016",
+      "候选人16",
+      "2027-01-16 14:00-16:00、2027-01-17 09:00-11:00",
+      "否"
+    ],
+    [
+      "DEMO017",
+      "候选人17",
+      "2027-01-17 09:00-11:00",
+      "否"
+    ],
+    [
+      "DEMO018",
+      "候选人18",
+      "2027-01-16 09:00-11:00、2027-01-16 14:00-16:00、2027-01-17 09:00-11:00",
+      "否"
+    ],
+    [
+      "DEMO019",
+      "候选人19",
+      "2027-01-16 14:00-16:00、2027-01-17 09:00-11:00",
+      "否"
+    ],
+    [
+      "DEMO020",
+      "候选人20",
+      "2027-01-17 09:00-11:00",
+      "是"
+    ],
+    [
+      "DEMO021",
+      "候选人21",
+      "2027-01-16 09:00-11:00、2027-01-16 14:00-16:00、2027-01-17 09:00-11:00",
+      "否"
+    ],
+    [
+      "DEMO022",
+      "候选人22",
+      "2027-01-16 14:00-16:00、2027-01-17 09:00-11:00",
+      "否"
+    ],
+    [
+      "DEMO023",
+      "候选人23",
+      "2027-01-17 09:00-11:00",
+      "否"
+    ],
+    [
+      "DEMO024",
+      "候选人24",
+      "2027-01-16 09:00-11:00、2027-01-16 14:00-16:00、2027-01-17 09:00-11:00",
+      "否"
+    ],
+    [
+      "DEMO025",
+      "候选人25",
+      "2027-01-16 14:00-16:00、2027-01-17 09:00-11:00",
+      "是"
+    ],
+    [
+      "DEMO026",
+      "候选人26",
+      "2027-01-17 09:00-11:00",
+      "否"
+    ],
+    [
+      "DEMO027",
+      "候选人27",
+      "2027-01-16 09:00-11:00、2027-01-16 14:00-16:00、2027-01-17 09:00-11:00",
+      "否"
+    ],
+    [
+      "DEMO028",
+      "候选人28",
+      "2027-01-16 14:00-16:00、2027-01-17 09:00-11:00",
+      "否"
+    ],
+    [
+      "DEMO029",
+      "候选人29",
+      "2027-01-17 09:00-11:00",
+      "否"
+    ],
+    [
+      "DEMO030",
+      "候选人30",
+      "2027-01-16 09:00-11:00、2027-01-16 14:00-16:00、2027-01-17 09:00-11:00",
+      "是"
+    ],
+    [
+      "DEMO031",
+      "候选人31",
+      "2027-01-16 14:00-16:00、2027-01-17 09:00-11:00",
+      "否"
+    ],
+    [
+      "DEMO032",
+      "候选人32",
+      "2027-01-17 09:00-11:00",
+      "否"
+    ],
+    [
+      "DEMO033",
+      "候选人33",
+      "2027-01-16 09:00-11:00、2027-01-16 14:00-16:00、2027-01-17 09:00-11:00",
+      "否"
+    ],
+    [
+      "DEMO034",
+      "候选人34",
+      "2027-01-16 14:00-16:00、2027-01-17 09:00-11:00",
+      "否"
+    ],
+    [
+      "DEMO035",
+      "候选人35",
+      "2027-01-17 09:00-11:00",
+      "是"
+    ],
+    [
+      "DEMO036",
+      "候选人36",
+      "2027-01-16 09:00-11:00、2027-01-16 14:00-16:00、2027-01-17 09:00-11:00",
+      "否"
+    ]
+  ],
+  "staff": [
+    [
+      "姓名",
+      "部门",
+      "面试官时间",
+      "场务时间",
+      "工作人员编号"
+    ],
+    [
+      "面试官1",
+      "示例团队",
+      "2027-01-16 09:00-11:00、2027-01-16 14:00-16:00、2027-01-17 09:00-11:00",
+      "",
+      "demo-staff-1"
+    ],
+    [
+      "面试官2",
+      "示例团队",
+      "2027-01-16 09:00-11:00、2027-01-16 14:00-16:00、2027-01-17 09:00-11:00",
+      "",
+      "demo-staff-2"
+    ],
+    [
+      "面试官3",
+      "示例团队",
+      "2027-01-16 09:00-11:00、2027-01-16 14:00-16:00、2027-01-17 09:00-11:00",
+      "",
+      "demo-staff-3"
+    ],
+    [
+      "场务1",
+      "示例团队",
+      "",
+      "2027-01-16 09:00-11:00、2027-01-16 14:00-16:00、2027-01-17 09:00-11:00",
+      "demo-field-1"
+    ]
+  ],
+  "sources": [
+    "演示候选人",
+    "演示工作人员"
+  ],
+  "year": 2027
+}</script>
+<script>/* One candidate, one interviewer. Pure functions; also usable from Node.js. */
+(function(root) {
+  'use strict';
+  const SESSIONS = [17,18,19].flatMap(day => [18,20].map(hour => ({id:`2026-11-${day}-${hour}`,date:`2026-11-${day}`,day,hour,start:hour*60,end:(hour+2)*60,label:`11月${day}日 ${hour}:00–${hour+2}:00`})));
+  const defaults = {duration:5,gap:0,reserve:0,field:1,enabled:SESSIONS.map(s=>s.id),overrides:{}};
+  const clock=n=>`${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;
+  function times(value,year) {
+    const text=String(value??'').trim(); if(!text) return [];
+    const chunks=text.split(/[、，,;；\n]+/).filter(s=>s.trim());
+    return chunks.map(chunk=>{
+      const dm=chunk.match(/(?:(\d{4})[年\/-])?(\d{1,2})[月\/-](\d{1,2})日?/),tm=chunk.match(/(\d{1,2})[:：](\d{2})\s*[-—–~～至]\s*(\d{1,2})[:：](\d{2})/);
+      if(!dm||!tm)throw Error(`无法识别时段：${chunk}。请使用“11月17日 18:00-20:00”等格式。`);
+      const y=dm[1]?+dm[1]:year,month=+dm[2],day=+dm[3],date=`${y}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+      const actual=new Date(Date.UTC(y,month-1,day));
+      if(actual.getUTCFullYear()!==y||actual.getUTCMonth()!==month-1||actual.getUTCDate()!==day)throw Error(`日期无效：${chunk}`);
+      const start=+tm[1]*60+ +tm[2],end=+tm[3]*60+ +tm[4];
+      if(+tm[1]>23||+tm[3]>24||+tm[2]>59||+tm[4]>59||end>1440||end<=start)throw Error(`时间范围无效或跨午夜：${chunk}`);
+      return {date,start,end};
+    });
+  }
+  function normalize(candidateRows,staffRows,sourceNames=[],year=2026) {
+    if(!Number.isInteger(year)||year<2000||year>2100)throw Error('请选择 2000—2100 范围内的面试年份。');
+    if(!candidateRows.length||!staffRows.length)throw Error('问卷不能为空。');
+    const ci=re=>candidateRows[0].findIndex(h=>re.test(String(h)));
+    const si=re=>staffRows[0].findIndex(h=>re.test(String(h)));
+    const cs=[ci(/学号|候选人编号/),ci(/姓名/),ci(/面试.*(?:时间|时段)|(?:时间|时段).*面试/),ci(/线上/)], ss=[si(/姓名/),si(/部门|学院|组织/),si(/面试官.*(?:时间|时段)|(?:时间|时段).*面试官/),si(/场务.*(?:时间|时段)|(?:时间|时段).*场务/)];
+    if(cs.some(x=>x<0)||[ss[0],ss[2],ss[3]].some(x=>x<0)) throw Error('表头不匹配。候选人表需含学号、姓名、面试时间和线上选项；工作人员表需含姓名、面试官时间、场务时间。');
+    const seen=new Set();
+    const candidates=candidateRows.slice(1).filter(r=>r.some(v=>String(v??'').trim())).map((r,index)=>{
+      const id=String(r[cs[0]]??'').trim(),name=String(r[cs[1]]??'').trim(),mode=String(r[cs[3]]??'').trim();
+      if(!id||!name) throw Error(`候选人第 ${index+2} 行缺少姓名或学号。`);
+      if(seen.has(id)) throw Error(`学号重复：${id}，请先核对原表。`); seen.add(id);
+      if(!['是','否'].includes(mode)) throw Error(`候选人第 ${index+2} 行的线上面试选项无法识别。`);
+      return {id,name,online:mode==='是',windows:times(r[cs[2]],year),sourceRow:index+2};
+    });
+    const staffNames=new Set(),staffIds=new Set(),staffIdColumn=si(/工作人员编号/);
+    const staff=staffRows.slice(1).filter(r=>r.some(v=>String(v??'').trim())).map((r,index)=>{
+      const name=String(r[ss[0]]??'').trim(); if(!name) throw Error(`工作人员第 ${index+2} 行缺少姓名。`);
+      if(staffNames.has(name)) throw Error(`工作人员姓名重复：${name}，请先合并或区分同名人员。`); staffNames.add(name);
+      const id=String(r[staffIdColumn]||`staff-${index+1}`).trim();
+      if(staffIds.has(id))throw Error('工作人员编号重复。');staffIds.add(id);
+      return {id,name,department:String(r[ss[1]]??''),interviewWindows:times(r[ss[2]],year),fieldWindows:times(r[ss[3]],year)};
+    });
+    const overlaps=candidates.filter(c=>staffNames.has(c.name));
+    if(overlaps.length) throw Error(`两张表出现同名人员：${overlaps.map(c=>c.name).join('、')}。请先确认是否同一人，避免跨角色冲突。`);
+    const windows=[...candidates.flatMap(c=>c.windows),...staff.flatMap(p=>[...p.interviewWindows,...p.fieldWindows])],dates=[...new Set(windows.map(w=>w.date))].sort(),sessions=[];
+    for(const date of dates){
+      const dayWindows=windows.filter(w=>w.date===date),bounds=[...new Set(dayWindows.flatMap(w=>[w.start,w.end]))].sort((a,b)=>a-b);
+      for(let j=0;j<bounds.length-1;j++){
+        const start=bounds[j],end=bounds[j+1];if(!dayWindows.some(w=>w.start<=start&&w.end>=end))continue;
+        const [y,m,d]=date.split('-').map(Number);
+        sessions.push({id:`${date}-${clock(start)}-${clock(end)}`,date,day:d,hour:Math.floor(start/60),start,end,label:`${m}月${d}日 ${clock(start)}–${clock(end)}`});
+      }
+    }
+    if(sessions.length>120)throw Error('识别出超过 120 个不同时段，请先合并问卷中零散的时间范围。');
+    const covers=(windows,s)=>windows.some(w=>w.date===s.date&&w.start<=s.start&&w.end>=s.end);
+    candidates.forEach(c=>{c.slots=sessions.filter(s=>covers(c.windows,s)).map(s=>s.id);});
+    staff.forEach(p=>{p.interview=sessions.filter(s=>covers(p.interviewWindows,s)).map(s=>s.id);p.field=sessions.filter(s=>covers(p.fieldWindows,s)).map(s=>s.id);});
+    return {candidates,staff,sessions,sources:sourceNames,year};
+  }
+  function staffPlan(data,config) {
+    const fields=Object.fromEntries(data.staff.map(p=>[p.id,0]));
+    return (data.sessions||SESSIONS).map(s=>{
+      const enabled=config.enabled.includes(s.id),roles={},warnings=[];
+      if(!enabled)return {...s,enabled,roles,interviewers:[],fieldStaff:[],capacity:0,per:0,usable:0,warnings};
+      let pool=[];
+      for(const p of data.staff) {
+        const i=p.interview.includes(s.id),f=p.field.includes(s.id),v=config.overrides[`${p.id}|${s.id}`]||'auto';
+        if(v==='off'||(!i&&!f)){roles[p.id]='off';continue;}
+        if(v==='interview'&&i)roles[p.id]='interview';
+        else if(v==='field'&&f){roles[p.id]='field';fields[p.id]++;}
+        else if(v==='auto')pool.push({p,i,f});
+        else {roles[p.id]='off';warnings.push(`${p.name}的指定角色不在问卷可用范围内`);}
+      }
+      let need=Math.max(0,config.field-Object.values(roles).filter(v=>v==='field').length);
+      const fieldOptions=pool.filter(x=>x.f).sort((a,b)=>Number(a.i)-Number(b.i)||fields[a.p.id]-fields[b.p.id]||a.p.interview.length-b.p.interview.length||a.p.id.localeCompare(b.p.id));
+      const selected=new Set(fieldOptions.slice(0,need).map(x=>x.p.id));
+      for(const x of pool) {
+        if(selected.has(x.p.id)){roles[x.p.id]='field';fields[x.p.id]++;}
+        else roles[x.p.id]=x.i?'interview':'off';
+      }
+      const interviewers=data.staff.filter(p=>roles[p.id]==='interview'),fieldStaff=data.staff.filter(p=>roles[p.id]==='field');
+      const covered=fieldStaff.length>=config.field, usable=Math.max(0,s.end-s.start-config.reserve);
+      const per=Math.max(0,Math.floor((usable+config.gap)/(config.duration+config.gap)));
+      if(!covered)warnings.push(`场务不足：需要 ${config.field} 人，实际 ${fieldStaff.length} 人，本场暂停安排候选人`);
+      if(!interviewers.length)warnings.push('没有可用面试官');
+      return {...s,enabled,roles,interviewers,fieldStaff,usable,covered,per,capacity:covered?per*interviewers.length:0,warnings};
+    });
+  }
+  // Successive shortest augmenting paths: maximum coverage first, then scarce
+  // availability and convex session occupancy costs. No fabricated availability.
+  function match(candidates,sessions) {
+    const N=candidates.length,source=N+sessions.length,sink=source+1,V=sink+1,g=Array.from({length:V},()=>[]);
+    function edge(a,b,cap,cost){const x={to:b,rev:g[b].length,cap,cost,initial:cap};g[a].push(x);g[b].push({to:a,rev:g[a].length-1,cap:0,cost:-cost,initial:0});return x;}
+    const refs=[];
+    candidates.forEach((c,i)=>{
+      const available=sessions.filter(s=>s.capacity&&c.slots.includes(s.id));
+      edge(source,i,1,available.length*10000);
+      refs[i]=available.map(s=>({s:sessions.indexOf(s),e:edge(i,N+sessions.indexOf(s),1,0)}));
+    });
+    sessions.forEach((s,j)=>{for(let k=1;k<=Math.min(s.capacity,N);k++)edge(N+j,sink,1,Math.round(1000*(2*k-1)/s.capacity));});
+    let flow=0;
+    while(true){
+      const d=Array(V).fill(Infinity),prev=Array(V),inq=Array(V).fill(false),q=[source];d[source]=0;inq[source]=true;
+      for(let h=0;h<q.length;h++){
+        const u=q[h];inq[u]=false;
+        g[u].forEach((e,k)=>{if(e.cap>0&&d[e.to]>d[u]+e.cost){d[e.to]=d[u]+e.cost;prev[e.to]=[u,k];if(!inq[e.to]){q.push(e.to);inq[e.to]=true;}}});
+      }
+      if(!prev[sink])break;
+      for(let v=sink;v!==source;){const [u,k]=prev[v],e=g[u][k];e.cap--;g[v][e.rev].cap++;v=u;}flow++;
+    }
+    return {flow,assignment:refs.map(list=>list.find(x=>x.e.cap===0)?.s??-1)};
+  }
+  function solve(data,input={}) {
+    const config={...defaults,...input,overrides:{...(input.overrides||{})},enabled:[...(input.enabled??(data.sessions||SESSIONS).map(s=>s.id))]};
+    for(const [k,lo,hi] of [['duration',1,120],['gap',0,30],['reserve',0,119],['field',0,15]])if(!Number.isInteger(config[k])||config[k]<lo||config[k]>hi)throw Error('排班参数超出范围。');
+    const sessions=staffPlan(data,config),referenceSeconds=config.duration*60,gapSeconds=config.gap*60;
+    sessions.forEach(s=>{s.standardCapacity=s.capacity;s.standardPer=s.per;});
+    const setCapacity=seconds=>sessions.forEach(s=>{
+      s.per=Math.max(0,Math.floor((s.usable*60+gapSeconds)/(seconds+gapSeconds)));
+      s.capacity=s.enabled&&s.covered?s.per*s.interviewers.length:0;
+    });
+    // First maximize coverage at one-second precision, then find the largest
+    // common duration that preserves that coverage. The reference is soft.
+    let matched=match(data.candidates,sessions),minimumSeconds=referenceSeconds;
+    if(matched.flow<data.candidates.length){
+      setCapacity(1);const maximum=match(data.candidates,sessions);
+      if(maximum.flow>matched.flow){
+        let lo=1,hi=referenceSeconds;
+        while(lo<hi){const mid=Math.ceil((lo+hi)/2);setCapacity(mid);if(match(data.candidates,sessions).flow===maximum.flow)lo=mid;else hi=mid-1;}
+        minimumSeconds=lo;
+      }
+      setCapacity(minimumSeconds);matched=match(data.candidates,sessions);
+    }
+    const workloads=Object.fromEntries(data.staff.map(p=>[p.id,{...p,count:0,interviewMinutes:0,fieldMinutes:0,fieldShifts:0,shifts:0}]));
+    const assignments=[];
+    for(let j=0;j<sessions.length;j++){
+      const s=sessions[j],people=data.candidates.filter((c,i)=>matched.assignment[i]===j);
+      const lanes=s.interviewers.map(p=>({p,people:[]}));
+      // Balance each block first (difference at most one), then total workload.
+      for(const c of people.sort((a,b)=>a.slots.length-b.slots.length||a.id.localeCompare(b.id))){
+        lanes.sort((a,b)=>a.people.length-b.people.length||workloads[a.p.id].count-workloads[b.p.id].count||a.p.id.localeCompare(b.p.id));
+        const lane=lanes[0];lane.people.push(c);workloads[lane.p.id].count++;
+      }
+      const maxLaneCount=Math.max(0,...lanes.map(l=>l.people.length));
+      // Recover spare time in quieter sessions without reducing coverage.
+      s.durationSeconds=maxLaneCount?Math.min(referenceSeconds,Math.floor((s.usable*60-(maxLaneCount-1)*gapSeconds)/maxLaneCount)):null;
+      let gapMinutes=0;
+      for(const lane of lanes){
+        lane.people.sort((a,b)=>Number(b.online)-Number(a.online)||a.id.localeCompare(b.id));
+        gapMinutes+=Math.max(0,lane.people.length-1)*config.gap;
+        lane.people.forEach((c,index)=>{
+          const startSeconds=s.start*60+index*(s.durationSeconds+gapSeconds),endSeconds=startSeconds+s.durationSeconds;
+          assignments.push({...c,session:s.id,interviewer:lane.p.id,startSeconds,endSeconds,durationSeconds:s.durationSeconds,start:startSeconds/60,end:endSeconds/60,duration:s.durationSeconds/60,status:'已安排'});
+        });
+        workloads[lane.p.id].interviewMinutes+=lane.people.length*(s.durationSeconds||0)/60;
+        workloads[lane.p.id].shifts++;
+      }
+      s.fieldStaff.forEach(p=>{workloads[p.id].fieldMinutes+=s.end-s.start;workloads[p.id].fieldShifts++;workloads[p.id].shifts++;});
+      s.count=people.length;s.online=people.filter(c=>c.online).length;s.offline=people.length-s.online;
+      s.budgetMinutes=s.interviewers.length*s.usable-gapMinutes;
+      s.average=s.count?s.budgetMinutes/s.count:null;s.scheduledAverage=s.count?s.durationSeconds/60:null;s.utilization=s.standardCapacity?s.count/s.standardCapacity:null;
+      s.lanes=lanes.map(l=>({staff:l.p.id,count:l.people.length}));
+    }
+    const unassigned=data.candidates.filter((c,i)=>matched.assignment[i]===-1).map(c=>({...c,status:'待安排',reason:!c.slots.length?'未填写可用时段':!c.slots.some(id=>config.enabled.includes(id))?'所选时段均未启用':!c.slots.some(id=>{const s=sessions.find(s=>s.id===id);return s?.enabled&&s.covered&&s.interviewers.length;})?'可用时段缺少面试官或场务':'扣除间隔和预留后，可用时间不足（已按秒压缩）'}));
+    assignments.sort((a,b)=>a.session.localeCompare(b.session)||a.start-b.start||a.interviewer.localeCompare(b.interviewer));
+    const durations=assignments.map(a=>a.durationSeconds);
+    return {config,sessions,assignments,unassigned,workloads:Object.values(workloads),matched:matched.flow,total:data.candidates.length,capacity:sessions.reduce((n,s)=>n+s.capacity,0),standardCapacity:sessions.reduce((n,s)=>n+s.standardCapacity,0),minimumSeconds,averageDuration:durations.length?durations.reduce((n,v)=>n+v,0)/durations.length/60:null,minDuration:durations.length?Math.min(...durations)/60:null,maxDuration:durations.length?Math.max(...durations)/60:null,compressedCount:durations.filter(v=>v<referenceSeconds).length};
+  }
+  function validate(data,result){
+    const errors=[],seen=new Set(),groups={};
+    for(const a of result.assignments){
+      if(seen.has(a.id))errors.push('候选人重复安排');seen.add(a.id);
+      const c=data.candidates.find(c=>c.id===a.id),s=result.sessions.find(s=>s.id===a.session),p=data.staff.find(p=>p.id===a.interviewer);
+      if(!c||!s||!p||!c.slots.includes(a.session)||!p.interview.includes(a.session))errors.push('超出可用时段');
+      if(!s||!p)continue;
+      if(!s.enabled||s.roles[p.id]!=='interview'||s.fieldStaff.length<result.config.field)errors.push('人员角色冲突或场务不足');
+      if(!Number.isInteger(a.durationSeconds)||a.durationSeconds<1||a.durationSeconds>result.config.duration*60||a.startSeconds<s.start*60||a.endSeconds>(s.end-result.config.reserve)*60||a.endSeconds-a.startSeconds!==a.durationSeconds||a.start!==a.startSeconds/60||a.end!==a.endSeconds/60||a.duration!==a.durationSeconds/60)errors.push('面试时间越界');
+      (groups[a.session+'|'+a.interviewer]??=[]).push(a);
+    }
+    for(const g of Object.values(groups)){g.sort((a,b)=>a.startSeconds-b.startSeconds);for(let i=1;i<g.length;i++)if(g[i].startSeconds<g[i-1].endSeconds+result.config.gap*60)errors.push('面试官时间冲突');}
+    for(const c of result.unassigned){if(seen.has(c.id))errors.push('已安排与待安排重叠');seen.add(c.id);}
+    if(seen.size!==data.candidates.length)errors.push('人数不守恒');
+    for(const s of result.sessions){if(s.count>s.capacity)errors.push('时段超容量');for(const p of s.fieldStaff)if(!p.field.includes(s.id))errors.push('场务超出可用时段');}
+    return [...new Set(errors)];
+  }
+  root.Planner={SESSIONS,defaults,normalize,solve,validate};
+  if(typeof module!=='undefined')module.exports=root.Planner;
+})(typeof globalThis!=='undefined'?globalThis:this);
+</script><script>/* Validated, immutable roster operations. No network or storage side effects. */
+(function(root){
+  'use strict';
+  const P=typeof module!=='undefined'?require('./scheduler.js'):root.Planner;
+  const headers={candidates:['学号','姓名','面试时间','线上面试'],staff:['姓名','部门','面试官时间','场务时间','工作人员编号']};
+  const hm=n=>`${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;
+  const windowsText=ws=>ws.map(w=>`${w.date} ${hm(w.start)}-${hm(w.end)}`).join('、');
+  const empty=(year=new Date().getFullYear())=>({candidates:[headers.candidates.slice()],staff:[headers.staff.slice()],sources:[],year});
+  function canonical(raw){
+    const d=P.normalize(raw.candidates,raw.staff,raw.sources,raw.year);
+    return {...empty(raw.year),sources:(raw.sources||[]).slice(),
+      candidates:[headers.candidates.slice(),...d.candidates.map(c=>[c.id,c.name,windowsText(c.windows),c.online?'是':'否'])],
+      staff:[headers.staff.slice(),...d.staff.map(p=>[p.name,p.department,windowsText(p.interviewWindows),windowsText(p.fieldWindows),p.id])]};
+  }
+  function change(raw,kind,key,row){
+    if(!['candidates','staff'].includes(kind))throw Error('名单类型无效。');
+    const next=canonical(raw),col=kind==='candidates'?0:4,rows=next[kind];
+    if(key===null){rows.push(row.slice());}
+    else {const index=rows.findIndex((r,i)=>i>0&&r[col]===key);if(index<1)throw Error('该记录已不存在。');rows[index]=row.slice();}
+    return canonical(next);
+  }
+  function remove(raw,kind,keys){
+    if(!['candidates','staff'].includes(kind))throw Error('名单类型无效。');
+    const next=canonical(raw),col=kind==='candidates'?0:4,ids=new Set(keys);
+    next[kind]=next[kind].filter((r,i)=>i===0||!ids.has(r[col]));return canonical(next);
+  }
+  // Retain disabled windows even when a changed availability splits a session.
+  function reconcile(config,before,after){
+    const disabled=before.sessions.filter(s=>!config.enabled.includes(s.id));
+    const enabled=after.sessions.filter(s=>!disabled.some(old=>old.date===s.date&&old.start<s.end&&old.end>s.start)).map(s=>s.id);
+    const overrides={};
+    for(const p of after.staff)for(const s of after.sessions){
+      const role=config.overrides[`${p.id}|${s.id}`];
+      if(role==='off'||role==='interview'&&p.interview.includes(s.id)||role==='field'&&p.field.includes(s.id))overrides[`${p.id}|${s.id}`]=role;
+    }
+    return {...config,enabled,overrides};
+  }
+  root.Roster={headers,empty,canonical,change,remove,reconcile,windowsText};
+  if(typeof module!=='undefined')module.exports=root.Roster;
+})(typeof globalThis!=='undefined'?globalThis:this);
+</script><script>/* Workbook layout authored with @oai/artifact-tool. */
+(function(root){
+const template={"files": {"xl/workbook.xml": "\u003c?xml version=\"1.0\" encoding=\"utf-8\"?>\u003cx:workbook xmlns:x=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">\u003cx:sheets>\u003cx:sheet name=\"候选人面试安排\" sheetId=\"1\" r:id=\"Redf2a4082fb04b7d\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" />\u003cx:sheet name=\"面试官排班\" sheetId=\"2\" r:id=\"R0895068d6ed14d49\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" />\u003cx:sheet name=\"场务排班\" sheetId=\"3\" r:id=\"R920121d54e6e47b8\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" />\u003c/x:sheets>\u003c/x:workbook>", "xl/styles.xml": "\u003c?xml version=\"1.0\" encoding=\"utf-8\"?>\u003cx:styleSheet xmlns:x=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">\u003cx:numFmts count=\"5\">\u003cx:numFmt numFmtId=\"200\" formatCode=\"@\" />\u003cx:numFmt numFmtId=\"201\" formatCode=\"yyyy-mm-dd\" />\u003cx:numFmt numFmtId=\"202\" formatCode=\"hh:mm:ss\" />\u003cx:numFmt numFmtId=\"203\" formatCode=\"0.00\" />\u003cx:numFmt numFmtId=\"204\" formatCode=\"0\" />\u003c/x:numFmts>\u003cx:fonts count=\"9\">\u003cx:font>\u003cx:sz val=\"11\" />\u003cx:name val=\"Carlito\" />\u003c/x:font>\u003cx:font>\u003cx:sz val=\"11\" />\u003cx:name val=\"Arial\" />\u003c/x:font>\u003cx:font>\u003cx:sz val=\"11\" />\u003cx:color rgb=\"FF243544\" />\u003cx:name val=\"Arial\" />\u003c/x:font>\u003cx:font>\u003cx:sz val=\"16\" />\u003cx:color rgb=\"FF243544\" />\u003cx:name val=\"Arial\" />\u003c/x:font>\u003cx:font>\u003cx:b />\u003cx:sz val=\"16\" />\u003cx:color rgb=\"FF243544\" />\u003cx:name val=\"Arial\" />\u003c/x:font>\u003cx:font>\u003cx:sz val=\"10\" />\u003cx:color rgb=\"FF243544\" />\u003cx:name val=\"Arial\" />\u003c/x:font>\u003cx:font>\u003cx:sz val=\"10\" />\u003cx:color rgb=\"FF74808E\" />\u003cx:name val=\"Arial\" />\u003c/x:font>\u003cx:font>\u003cx:sz val=\"11\" />\u003cx:color rgb=\"FFFFFFFF\" />\u003cx:name val=\"Arial\" />\u003c/x:font>\u003cx:font>\u003cx:b />\u003cx:sz val=\"11\" />\u003cx:color rgb=\"FFFFFFFF\" />\u003cx:name val=\"Arial\" />\u003c/x:font>\u003c/x:fonts>\u003cx:fills count=\"3\">\u003cx:fill>\u003cx:patternFill patternType=\"none\" />\u003c/x:fill>\u003cx:fill>\u003cx:patternFill patternType=\"gray125\" />\u003c/x:fill>\u003cx:fill>\u003cx:patternFill patternType=\"solid\">\u003cx:fgColor rgb=\"FF102B4C\" />\u003c/x:patternFill>\u003c/x:fill>\u003c/x:fills>\u003cx:borders count=\"1\">\u003cx:border>\u003cx:left />\u003cx:right />\u003cx:top />\u003cx:bottom />\u003cx:diagonal />\u003c/x:border>\u003c/x:borders>\u003cx:cellStyleXfs count=\"1\">\u003cx:xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\" />\u003c/x:cellStyleXfs>\u003cx:cellXfs count=\"23\">\u003cx:xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\" xfId=\"0\" />\u003cx:xf numFmtId=\"0\" fontId=\"1\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyNumberFormat=\"1\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" />\u003cx:xf numFmtId=\"0\" fontId=\"2\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyNumberFormat=\"1\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" />\u003cx:xf numFmtId=\"0\" fontId=\"2\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyNumberFormat=\"1\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\">\u003cx:alignment vertical=\"center\" />\u003c/x:xf>\u003cx:xf numFmtId=\"0\" fontId=\"3\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyNumberFormat=\"1\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\">\u003cx:alignment vertical=\"center\" />\u003c/x:xf>\u003cx:xf numFmtId=\"0\" fontId=\"4\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyNumberFormat=\"1\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\">\u003cx:alignment vertical=\"center\" />\u003c/x:xf>\u003cx:xf numFmtId=\"0\" fontId=\"5\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyNumberFormat=\"1\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\">\u003cx:alignment vertical=\"center\" />\u003c/x:xf>\u003cx:xf numFmtId=\"0\" fontId=\"6\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyNumberFormat=\"1\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\">\u003cx:alignment vertical=\"center\" />\u003c/x:xf>\u003cx:xf numFmtId=\"0\" fontId=\"2\" fillId=\"2\" borderId=\"0\" xfId=\"0\" applyNumberFormat=\"1\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\">\u003cx:alignment vertical=\"center\" />\u003c/x:xf>\u003cx:xf numFmtId=\"0\" fontId=\"7\" fillId=\"2\" borderId=\"0\" xfId=\"0\" applyNumberFormat=\"1\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\">\u003cx:alignment vertical=\"center\" />\u003c/x:xf>\u003cx:xf numFmtId=\"0\" fontId=\"8\" fillId=\"2\" borderId=\"0\" xfId=\"0\" applyNumberFormat=\"1\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\">\u003cx:alignment vertical=\"center\" />\u003c/x:xf>\u003cx:xf numFmtId=\"0\" fontId=\"8\" fillId=\"2\" borderId=\"0\" xfId=\"0\" applyNumberFormat=\"1\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\">\u003cx:alignment horizontal=\"center\" vertical=\"center\" />\u003c/x:xf>\u003cx:xf numFmtId=\"200\" fontId=\"2\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyNumberFormat=\"1\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\">\u003cx:alignment vertical=\"center\" />\u003c/x:xf>\u003cx:xf numFmtId=\"200\" fontId=\"2\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyNumberFormat=\"1\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\">\u003cx:alignment horizontal=\"left\" vertical=\"center\" />\u003c/x:xf>\u003cx:xf numFmtId=\"200\" fontId=\"2\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyNumberFormat=\"1\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\">\u003cx:alignment horizontal=\"left\" vertical=\"center\" wrapText=\"1\" />\u003c/x:xf>\u003cx:xf numFmtId=\"201\" fontId=\"2\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyNumberFormat=\"1\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\">\u003cx:alignment vertical=\"center\" />\u003c/x:xf>\u003cx:xf numFmtId=\"201\" fontId=\"2\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyNumberFormat=\"1\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\">\u003cx:alignment horizontal=\"center\" vertical=\"center\" />\u003c/x:xf>\u003cx:xf numFmtId=\"202\" fontId=\"2\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyNumberFormat=\"1\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\">\u003cx:alignment vertical=\"center\" />\u003c/x:xf>\u003cx:xf numFmtId=\"202\" fontId=\"2\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyNumberFormat=\"1\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\">\u003cx:alignment horizontal=\"center\" vertical=\"center\" />\u003c/x:xf>\u003cx:xf numFmtId=\"203\" fontId=\"2\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyNumberFormat=\"1\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\">\u003cx:alignment vertical=\"center\" />\u003c/x:xf>\u003cx:xf numFmtId=\"203\" fontId=\"2\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyNumberFormat=\"1\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\">\u003cx:alignment horizontal=\"right\" vertical=\"center\" />\u003c/x:xf>\u003cx:xf numFmtId=\"204\" fontId=\"2\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyNumberFormat=\"1\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\">\u003cx:alignment vertical=\"center\" />\u003c/x:xf>\u003cx:xf numFmtId=\"204\" fontId=\"2\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyNumberFormat=\"1\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\">\u003cx:alignment horizontal=\"right\" vertical=\"center\" />\u003c/x:xf>\u003c/x:cellXfs>\u003cx:cellStyles count=\"1\">\u003cx:cellStyle name=\"Normal\" xfId=\"0\" />\u003c/x:cellStyles>\u003c/x:styleSheet>", "xl/theme/theme1.xml": "\u003c?xml version=\"1.0\" encoding=\"utf-8\"?>\u003ca:theme name=\"ChatGPT\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\">\u003ca:themeElements>\u003ca:clrScheme name=\"ChatGPT\">\u003ca:dk1>\u003ca:sysClr val=\"windowText\" lastClr=\"000000\" />\u003c/a:dk1>\u003ca:lt1>\u003ca:sysClr val=\"window\" lastClr=\"FFFFFF\" />\u003c/a:lt1>\u003ca:dk2>\u003ca:srgbClr val=\"0E2841\" />\u003c/a:dk2>\u003ca:lt2>\u003ca:srgbClr val=\"E8E8E8\" />\u003c/a:lt2>\u003ca:accent1>\u003ca:srgbClr val=\"156082\" />\u003c/a:accent1>\u003ca:accent2>\u003ca:srgbClr val=\"E97132\" />\u003c/a:accent2>\u003ca:accent3>\u003ca:srgbClr val=\"196B24\" />\u003c/a:accent3>\u003ca:accent4>\u003ca:srgbClr val=\"0F9ED5\" />\u003c/a:accent4>\u003ca:accent5>\u003ca:srgbClr val=\"A02B93\" />\u003c/a:accent5>\u003ca:accent6>\u003ca:srgbClr val=\"4EA72E\" />\u003c/a:accent6>\u003ca:hlink>\u003ca:srgbClr val=\"467886\" />\u003c/a:hlink>\u003ca:folHlink>\u003ca:srgbClr val=\"96607D\" />\u003c/a:folHlink>\u003c/a:clrScheme>\u003ca:fontScheme name=\"Office\">\u003ca:majorFont>\u003ca:latin typeface=\"Calibri Light\" />\u003ca:ea typeface=\"Calibri Light\" />\u003ca:cs typeface=\"Calibri Light\" />\u003c/a:majorFont>\u003ca:minorFont>\u003ca:latin typeface=\"Calibri\" />\u003ca:ea typeface=\"Calibri\" />\u003ca:cs typeface=\"Calibri\" />\u003c/a:minorFont>\u003c/a:fontScheme>\u003ca:fmtScheme name=\"ChatGPT\">\u003ca:fillStyleLst>\u003ca:solidFill>\u003ca:schemeClr val=\"phClr\" />\u003c/a:solidFill>\u003ca:gradFill>\u003ca:gsLst>\u003ca:gs pos=\"0\">\u003ca:schemeClr val=\"phClr\">\u003ca:tint val=\"67000\" />\u003ca:lumMod val=\"110000\" />\u003ca:satMod val=\"105000\" />\u003c/a:schemeClr>\u003c/a:gs>\u003ca:gs pos=\"50000\">\u003ca:schemeClr val=\"phClr\">\u003ca:tint val=\"73000\" />\u003ca:lumMod val=\"105000\" />\u003ca:satMod val=\"103000\" />\u003c/a:schemeClr>\u003c/a:gs>\u003ca:gs pos=\"100000\">\u003ca:schemeClr val=\"phClr\">\u003ca:tint val=\"81000\" />\u003ca:lumMod val=\"105000\" />\u003ca:satMod val=\"109000\" />\u003c/a:schemeClr>\u003c/a:gs>\u003c/a:gsLst>\u003ca:lin ang=\"5400000\" scaled=\"0\" />\u003c/a:gradFill>\u003ca:gradFill>\u003ca:gsLst>\u003ca:gs pos=\"0\">\u003ca:schemeClr val=\"phClr\">\u003ca:tint val=\"94000\" />\u003ca:lumMod val=\"102000\" />\u003ca:satMod val=\"103000\" />\u003c/a:schemeClr>\u003c/a:gs>\u003ca:gs pos=\"50000\">\u003ca:schemeClr val=\"phClr\">\u003ca:shade val=\"100000\" />\u003ca:lumMod val=\"100000\" />\u003ca:satMod val=\"110000\" />\u003c/a:schemeClr>\u003c/a:gs>\u003ca:gs pos=\"100000\">\u003ca:schemeClr val=\"phClr\">\u003ca:shade val=\"78000\" />\u003ca:lumMod val=\"99000\" />\u003ca:satMod val=\"120000\" />\u003c/a:schemeClr>\u003c/a:gs>\u003c/a:gsLst>\u003ca:lin ang=\"5400000\" scaled=\"0\" />\u003c/a:gradFill>\u003c/a:fillStyleLst>\u003ca:lnStyleLst>\u003ca:ln w=\"12700\">\u003ca:solidFill>\u003ca:schemeClr val=\"phClr\" />\u003c/a:solidFill>\u003ca:prstDash val=\"solid\" />\u003c/a:ln>\u003ca:ln w=\"19050\">\u003ca:solidFill>\u003ca:schemeClr val=\"phClr\" />\u003c/a:solidFill>\u003ca:prstDash val=\"solid\" />\u003c/a:ln>\u003ca:ln w=\"25400\">\u003ca:solidFill>\u003ca:schemeClr val=\"phClr\" />\u003c/a:solidFill>\u003ca:prstDash val=\"solid\" />\u003c/a:ln>\u003c/a:lnStyleLst>\u003ca:effectStyleLst>\u003ca:effectStyle>\u003ca:effectLst />\u003c/a:effectStyle>\u003ca:effectStyle>\u003ca:effectLst />\u003c/a:effectStyle>\u003ca:effectStyle>\u003ca:effectLst>\u003ca:outerShdw blurRad=\"57150\" dist=\"19050\" dir=\"5400000\">\u003ca:srgbClr val=\"000000\">\u003ca:alpha val=\"63000\" />\u003c/a:srgbClr>\u003c/a:outerShdw>\u003c/a:effectLst>\u003c/a:effectStyle>\u003c/a:effectStyleLst>\u003ca:bgFillStyleLst>\u003ca:solidFill>\u003ca:schemeClr val=\"phClr\" />\u003c/a:solidFill>\u003ca:solidFill>\u003ca:schemeClr val=\"phClr\">\u003ca:tint val=\"95000\" />\u003ca:satMod val=\"170000\" />\u003c/a:schemeClr>\u003c/a:solidFill>\u003ca:gradFill>\u003ca:gsLst>\u003ca:gs pos=\"0\">\u003ca:schemeClr val=\"phClr\">\u003ca:tint val=\"93000\" />\u003ca:shade val=\"98000\" />\u003ca:lumMod val=\"102000\" />\u003ca:satMod val=\"150000\" />\u003c/a:schemeClr>\u003c/a:gs>\u003ca:gs pos=\"50000\">\u003ca:schemeClr val=\"phClr\">\u003ca:tint val=\"98000\" />\u003ca:shade val=\"90000\" />\u003ca:lumMod val=\"103000\" />\u003ca:satMod val=\"130000\" />\u003c/a:schemeClr>\u003c/a:gs>\u003ca:gs pos=\"100000\">\u003ca:schemeClr val=\"phClr\">\u003ca:shade val=\"63000\" />\u003ca:satMod val=\"120000\" />\u003c/a:schemeClr>\u003c/a:gs>\u003c/a:gsLst>\u003ca:lin ang=\"5400000\" scaled=\"0\" />\u003c/a:gradFill>\u003c/a:bgFillStyleLst>\u003c/a:fmtScheme>\u003c/a:themeElements>\u003c/a:theme>", "xl/sharedStrings.xml": "\u003c?xml version=\"1.0\" encoding=\"utf-8\"?>\u003cx:sst xmlns:x=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" />", "xl/worksheets/sheet1.xml": "\u003c?xml version=\"1.0\" encoding=\"utf-8\"?>\u003cx:worksheet xmlns:x=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">\u003cx:sheetPr>\u003cx:tabColor rgb=\"FF2563EB\" />\u003c/x:sheetPr>\u003cx:sheetViews>\u003cx:sheetView showGridLines=\"0\" workbookViewId=\"0\">\u003cx:pane ySplit=\"4\" topLeftCell=\"A5\" activePane=\"bottomLeft\" state=\"frozen\" />\u003c/x:sheetView>\u003c/x:sheetViews>\u003cx:sheetFormatPr defaultRowHeight=\"15\" />\u003cx:cols>\u003cx:col min=\"1\" max=\"1\" width=\"20\" hidden=\"0\" customWidth=\"1\" />\u003cx:col min=\"2\" max=\"2\" width=\"14\" hidden=\"0\" customWidth=\"1\" />\u003cx:col min=\"3\" max=\"3\" width=\"12\" hidden=\"0\" customWidth=\"1\" />\u003cx:col min=\"4\" max=\"4\" width=\"12\" hidden=\"0\" customWidth=\"1\" />\u003cx:col min=\"5\" max=\"5\" width=\"15\" hidden=\"0\" customWidth=\"1\" />\u003cx:col min=\"6\" max=\"6\" width=\"13\" hidden=\"0\" customWidth=\"1\" />\u003cx:col min=\"7\" max=\"7\" width=\"13\" hidden=\"0\" customWidth=\"1\" />\u003cx:col min=\"8\" max=\"8\" width=\"21\" hidden=\"0\" customWidth=\"1\" />\u003cx:col min=\"9\" max=\"9\" width=\"14\" hidden=\"0\" customWidth=\"1\" />\u003cx:col min=\"10\" max=\"10\" width=\"28\" hidden=\"0\" customWidth=\"1\" />\u003cx:col min=\"11\" max=\"11\" width=\"44\" hidden=\"0\" customWidth=\"1\" />\u003c/x:cols>\u003cx:sheetData>\u003cx:row r=\"1\" ht=\"24\" customHeight=\"1\">\u003cx:c r=\"A1\" s=\"3\" />\u003cx:c r=\"B1\" s=\"3\" />\u003cx:c r=\"C1\" s=\"3\" />\u003cx:c r=\"D1\" s=\"3\" />\u003cx:c r=\"E1\" s=\"3\" />\u003cx:c r=\"F1\" s=\"3\" />\u003cx:c r=\"G1\" s=\"3\" />\u003cx:c r=\"H1\" s=\"3\" />\u003cx:c r=\"I1\" s=\"3\" />\u003cx:c r=\"J1\" s=\"3\" />\u003cx:c r=\"K1\" s=\"3\" />\u003c/x:row>\u003cx:row r=\"2\" ht=\"32\" customHeight=\"1\">\u003cx:c r=\"A2\" s=\"5\" t=\"str\">\u003cx:v>候选人面试安排\u003c/x:v>\u003c/x:c>\u003cx:c r=\"B2\" s=\"3\" />\u003cx:c r=\"C2\" s=\"3\" />\u003cx:c r=\"D2\" s=\"3\" />\u003cx:c r=\"E2\" s=\"3\" />\u003cx:c r=\"F2\" s=\"3\" />\u003cx:c r=\"G2\" s=\"3\" />\u003cx:c r=\"H2\" s=\"3\" />\u003cx:c r=\"I2\" s=\"3\" />\u003cx:c r=\"J2\" s=\"3\" />\u003cx:c r=\"K2\" s=\"3\" />\u003c/x:row>\u003cx:row r=\"3\" ht=\"24\" customHeight=\"1\">\u003cx:c r=\"A3\" s=\"7\" t=\"str\">\u003cx:v>当前排班快照\u003c/x:v>\u003c/x:c>\u003cx:c r=\"B3\" s=\"3\" />\u003cx:c r=\"C3\" s=\"3\" />\u003cx:c r=\"D3\" s=\"3\" />\u003cx:c r=\"E3\" s=\"3\" />\u003cx:c r=\"F3\" s=\"3\" />\u003cx:c r=\"G3\" s=\"3\" />\u003cx:c r=\"H3\" s=\"3\" />\u003cx:c r=\"I3\" s=\"3\" />\u003cx:c r=\"J3\" s=\"3\" />\u003cx:c r=\"K3\" s=\"3\" />\u003c/x:row>\u003cx:row r=\"4\" ht=\"30\" customHeight=\"1\">\u003cx:c r=\"A4\" s=\"11\" t=\"str\">\u003cx:v>学号\u003c/x:v>\u003c/x:c>\u003cx:c r=\"B4\" s=\"11\" t=\"str\">\u003cx:v>候选人\u003c/x:v>\u003c/x:c>\u003cx:c r=\"C4\" s=\"11\" t=\"str\">\u003cx:v>面试方式\u003c/x:v>\u003c/x:c>\u003cx:c r=\"D4\" s=\"11\" t=\"str\">\u003cx:v>安排状态\u003c/x:v>\u003c/x:c>\u003cx:c r=\"E4\" s=\"11\" t=\"str\">\u003cx:v>日期\u003c/x:v>\u003c/x:c>\u003cx:c r=\"F4\" s=\"11\" t=\"str\">\u003cx:v>开始时间\u003c/x:v>\u003c/x:c>\u003cx:c r=\"G4\" s=\"11\" t=\"str\">\u003cx:v>结束时间\u003c/x:v>\u003c/x:c>\u003cx:c r=\"H4\" s=\"11\" t=\"str\">\u003cx:v>面试时长（分钟）\u003c/x:v>\u003c/x:c>\u003cx:c r=\"I4\" s=\"11\" t=\"str\">\u003cx:v>面试官\u003c/x:v>\u003c/x:c>\u003cx:c r=\"J4\" s=\"11\" t=\"str\">\u003cx:v>本场场务\u003c/x:v>\u003c/x:c>\u003cx:c r=\"K4\" s=\"11\" t=\"str\">\u003cx:v>待安排原因\u003c/x:v>\u003c/x:c>\u003c/x:row>\u003cx:row r=\"5\" ht=\"26\" customHeight=\"1\">\u003cx:c r=\"A5\" s=\"14\" t=\"str\">\u003cx:v>样例\u003c/x:v>\u003c/x:c>\u003cx:c r=\"B5\" s=\"14\" t=\"str\">\u003cx:v>样例\u003c/x:v>\u003c/x:c>\u003cx:c r=\"C5\" s=\"14\" t=\"str\">\u003cx:v>样例\u003c/x:v>\u003c/x:c>\u003cx:c r=\"D5\" s=\"14\" t=\"str\">\u003cx:v>样例\u003c/x:v>\u003c/x:c>\u003cx:c r=\"E5\" s=\"16\" t=\"n\">\u003cx:v>46000\u003c/x:v>\u003c/x:c>\u003cx:c r=\"F5\" s=\"18\" t=\"n\">\u003cx:v>0.75\u003c/x:v>\u003c/x:c>\u003cx:c r=\"G5\" s=\"18\" t=\"n\">\u003cx:v>0.75\u003c/x:v>\u003c/x:c>\u003cx:c r=\"H5\" s=\"20\" t=\"n\">\u003cx:v>0\u003c/x:v>\u003c/x:c>\u003cx:c r=\"I5\" s=\"14\" t=\"str\">\u003cx:v>样例\u003c/x:v>\u003c/x:c>\u003cx:c r=\"J5\" s=\"14\" t=\"str\">\u003cx:v>样例\u003c/x:v>\u003c/x:c>\u003cx:c r=\"K5\" s=\"14\" t=\"str\">\u003cx:v>样例\u003c/x:v>\u003c/x:c>\u003c/x:row>\u003c/x:sheetData>\u003cx:pageMargins left=\"0.7\" right=\"0.7\" top=\"0.75\" bottom=\"0.75\" header=\"0.3\" footer=\"0.3\" />\u003c/x:worksheet>", "xl/worksheets/sheet2.xml": "\u003c?xml version=\"1.0\" encoding=\"utf-8\"?>\u003cx:worksheet xmlns:x=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">\u003cx:sheetPr>\u003cx:tabColor rgb=\"FF2478B5\" />\u003c/x:sheetPr>\u003cx:sheetViews>\u003cx:sheetView showGridLines=\"0\" workbookViewId=\"0\">\u003cx:pane ySplit=\"4\" topLeftCell=\"A5\" activePane=\"bottomLeft\" state=\"frozen\" />\u003c/x:sheetView>\u003c/x:sheetViews>\u003cx:sheetFormatPr defaultRowHeight=\"15\" />\u003cx:cols>\u003cx:col min=\"1\" max=\"1\" width=\"15\" hidden=\"0\" customWidth=\"1\" />\u003cx:col min=\"2\" max=\"2\" width=\"13\" hidden=\"0\" customWidth=\"1\" />\u003cx:col min=\"3\" max=\"3\" width=\"13\" hidden=\"0\" customWidth=\"1\" />\u003cx:col min=\"4\" max=\"4\" width=\"14\" hidden=\"0\" customWidth=\"1\" />\u003cx:col min=\"5\" max=\"5\" width=\"32\" hidden=\"0\" customWidth=\"1\" />\u003cx:col min=\"6\" max=\"6\" width=\"13\" hidden=\"0\" customWidth=\"1\" />\u003cx:col min=\"7\" max=\"7\" width=\"13\" hidden=\"0\" customWidth=\"1\" />\u003cx:col min=\"8\" max=\"8\" width=\"13\" hidden=\"0\" customWidth=\"1\" />\u003cx:col min=\"9\" max=\"9\" width=\"13\" hidden=\"0\" customWidth=\"1\" />\u003cx:col min=\"10\" max=\"10\" width=\"13\" hidden=\"0\" customWidth=\"1\" />\u003cx:col min=\"11\" max=\"11\" width=\"20\" hidden=\"0\" customWidth=\"1\" />\u003cx:col min=\"12\" max=\"12\" width=\"44\" hidden=\"0\" customWidth=\"1\" />\u003c/x:cols>\u003cx:sheetData>\u003cx:row r=\"1\" ht=\"24\" customHeight=\"1\">\u003cx:c r=\"A1\" s=\"3\" />\u003cx:c r=\"B1\" s=\"3\" />\u003cx:c r=\"C1\" s=\"3\" />\u003cx:c r=\"D1\" s=\"3\" />\u003cx:c r=\"E1\" s=\"3\" />\u003cx:c r=\"F1\" s=\"3\" />\u003cx:c r=\"G1\" s=\"3\" />\u003cx:c r=\"H1\" s=\"3\" />\u003cx:c r=\"I1\" s=\"3\" />\u003cx:c r=\"J1\" s=\"3\" />\u003cx:c r=\"K1\" s=\"3\" />\u003cx:c r=\"L1\" s=\"3\" />\u003c/x:row>\u003cx:row r=\"2\" ht=\"32\" customHeight=\"1\">\u003cx:c r=\"A2\" s=\"5\" t=\"str\">\u003cx:v>面试官排班\u003c/x:v>\u003c/x:c>\u003cx:c r=\"B2\" s=\"3\" />\u003cx:c r=\"C2\" s=\"3\" />\u003cx:c r=\"D2\" s=\"3\" />\u003cx:c r=\"E2\" s=\"3\" />\u003cx:c r=\"F2\" s=\"3\" />\u003cx:c r=\"G2\" s=\"3\" />\u003cx:c r=\"H2\" s=\"3\" />\u003cx:c r=\"I2\" s=\"3\" />\u003cx:c r=\"J2\" s=\"3\" />\u003cx:c r=\"K2\" s=\"3\" />\u003cx:c r=\"L2\" s=\"3\" />\u003c/x:row>\u003cx:row r=\"3\" ht=\"24\" customHeight=\"1\">\u003cx:c r=\"A3\" s=\"7\" t=\"str\">\u003cx:v>当前排班快照\u003c/x:v>\u003c/x:c>\u003cx:c r=\"B3\" s=\"3\" />\u003cx:c r=\"C3\" s=\"3\" />\u003cx:c r=\"D3\" s=\"3\" />\u003cx:c r=\"E3\" s=\"3\" />\u003cx:c r=\"F3\" s=\"3\" />\u003cx:c r=\"G3\" s=\"3\" />\u003cx:c r=\"H3\" s=\"3\" />\u003cx:c r=\"I3\" s=\"3\" />\u003cx:c r=\"J3\" s=\"3\" />\u003cx:c r=\"K3\" s=\"3\" />\u003cx:c r=\"L3\" s=\"3\" />\u003c/x:row>\u003cx:row r=\"4\" ht=\"30\" customHeight=\"1\">\u003cx:c r=\"A4\" s=\"11\" t=\"str\">\u003cx:v>日期\u003c/x:v>\u003c/x:c>\u003cx:c r=\"B4\" s=\"11\" t=\"str\">\u003cx:v>时段开始\u003c/x:v>\u003c/x:c>\u003cx:c r=\"C4\" s=\"11\" t=\"str\">\u003cx:v>时段结束\u003c/x:v>\u003c/x:c>\u003cx:c r=\"D4\" s=\"11\" t=\"str\">\u003cx:v>面试官\u003c/x:v>\u003c/x:c>\u003cx:c r=\"E4\" s=\"11\" t=\"str\">\u003cx:v>部门\u003c/x:v>\u003c/x:c>\u003cx:c r=\"F4\" s=\"11\" t=\"str\">\u003cx:v>安排人数\u003c/x:v>\u003c/x:c>\u003cx:c r=\"G4\" s=\"11\" t=\"str\">\u003cx:v>线上人数\u003c/x:v>\u003c/x:c>\u003cx:c r=\"H4\" s=\"11\" t=\"str\">\u003cx:v>线下人数\u003c/x:v>\u003c/x:c>\u003cx:c r=\"I4\" s=\"11\" t=\"str\">\u003cx:v>首场面试\u003c/x:v>\u003c/x:c>\u003cx:c r=\"J4\" s=\"11\" t=\"str\">\u003cx:v>末场结束\u003c/x:v>\u003c/x:c>\u003cx:c r=\"K4\" s=\"11\" t=\"str\">\u003cx:v>实际面试分钟\u003c/x:v>\u003c/x:c>\u003cx:c r=\"L4\" s=\"11\" t=\"str\">\u003cx:v>备注\u003c/x:v>\u003c/x:c>\u003c/x:row>\u003cx:row r=\"5\" ht=\"26\" customHeight=\"1\">\u003cx:c r=\"A5\" s=\"16\" t=\"n\">\u003cx:v>46000\u003c/x:v>\u003c/x:c>\u003cx:c r=\"B5\" s=\"18\" t=\"n\">\u003cx:v>0.75\u003c/x:v>\u003c/x:c>\u003cx:c r=\"C5\" s=\"18\" t=\"n\">\u003cx:v>0.75\u003c/x:v>\u003c/x:c>\u003cx:c r=\"D5\" s=\"14\" t=\"str\">\u003cx:v>样例\u003c/x:v>\u003c/x:c>\u003cx:c r=\"E5\" s=\"14\" t=\"str\">\u003cx:v>样例\u003c/x:v>\u003c/x:c>\u003cx:c r=\"F5\" s=\"22\" t=\"n\">\u003cx:v>0\u003c/x:v>\u003c/x:c>\u003cx:c r=\"G5\" s=\"22\" t=\"n\">\u003cx:v>0\u003c/x:v>\u003c/x:c>\u003cx:c r=\"H5\" s=\"22\" t=\"n\">\u003cx:v>0\u003c/x:v>\u003c/x:c>\u003cx:c r=\"I5\" s=\"18\" t=\"n\">\u003cx:v>0.75\u003c/x:v>\u003c/x:c>\u003cx:c r=\"J5\" s=\"18\" t=\"n\">\u003cx:v>0.75\u003c/x:v>\u003c/x:c>\u003cx:c r=\"K5\" s=\"20\" t=\"n\">\u003cx:v>0\u003c/x:v>\u003c/x:c>\u003cx:c r=\"L5\" s=\"14\" t=\"str\">\u003cx:v>样例\u003c/x:v>\u003c/x:c>\u003c/x:row>\u003c/x:sheetData>\u003cx:pageMargins left=\"0.7\" right=\"0.7\" top=\"0.75\" bottom=\"0.75\" header=\"0.3\" footer=\"0.3\" />\u003c/x:worksheet>", "xl/worksheets/sheet3.xml": "\u003c?xml version=\"1.0\" encoding=\"utf-8\"?>\u003cx:worksheet xmlns:x=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">\u003cx:sheetPr>\u003cx:tabColor rgb=\"FF102B4C\" />\u003c/x:sheetPr>\u003cx:sheetViews>\u003cx:sheetView showGridLines=\"0\" workbookViewId=\"0\">\u003cx:pane ySplit=\"4\" topLeftCell=\"A5\" activePane=\"bottomLeft\" state=\"frozen\" />\u003c/x:sheetView>\u003c/x:sheetViews>\u003cx:sheetFormatPr defaultRowHeight=\"15\" />\u003cx:cols>\u003cx:col min=\"1\" max=\"1\" width=\"15\" hidden=\"0\" customWidth=\"1\" />\u003cx:col min=\"2\" max=\"2\" width=\"13\" hidden=\"0\" customWidth=\"1\" />\u003cx:col min=\"3\" max=\"3\" width=\"13\" hidden=\"0\" customWidth=\"1\" />\u003cx:col min=\"4\" max=\"4\" width=\"14\" hidden=\"0\" customWidth=\"1\" />\u003cx:col min=\"5\" max=\"5\" width=\"32\" hidden=\"0\" customWidth=\"1\" />\u003cx:col min=\"6\" max=\"6\" width=\"14\" hidden=\"0\" customWidth=\"1\" />\u003cx:col min=\"7\" max=\"7\" width=\"19\" hidden=\"0\" customWidth=\"1\" />\u003cx:col min=\"8\" max=\"8\" width=\"13\" hidden=\"0\" customWidth=\"1\" />\u003cx:col min=\"9\" max=\"9\" width=\"50\" hidden=\"0\" customWidth=\"1\" />\u003cx:col min=\"10\" max=\"10\" width=\"44\" hidden=\"0\" customWidth=\"1\" />\u003c/x:cols>\u003cx:sheetData>\u003cx:row r=\"1\" ht=\"24\" customHeight=\"1\">\u003cx:c r=\"A1\" s=\"3\" />\u003cx:c r=\"B1\" s=\"3\" />\u003cx:c r=\"C1\" s=\"3\" />\u003cx:c r=\"D1\" s=\"3\" />\u003cx:c r=\"E1\" s=\"3\" />\u003cx:c r=\"F1\" s=\"3\" />\u003cx:c r=\"G1\" s=\"3\" />\u003cx:c r=\"H1\" s=\"3\" />\u003cx:c r=\"I1\" s=\"3\" />\u003cx:c r=\"J1\" s=\"3\" />\u003c/x:row>\u003cx:row r=\"2\" ht=\"32\" customHeight=\"1\">\u003cx:c r=\"A2\" s=\"5\" t=\"str\">\u003cx:v>场务排班\u003c/x:v>\u003c/x:c>\u003cx:c r=\"B2\" s=\"3\" />\u003cx:c r=\"C2\" s=\"3\" />\u003cx:c r=\"D2\" s=\"3\" />\u003cx:c r=\"E2\" s=\"3\" />\u003cx:c r=\"F2\" s=\"3\" />\u003cx:c r=\"G2\" s=\"3\" />\u003cx:c r=\"H2\" s=\"3\" />\u003cx:c r=\"I2\" s=\"3\" />\u003cx:c r=\"J2\" s=\"3\" />\u003c/x:row>\u003cx:row r=\"3\" ht=\"24\" customHeight=\"1\">\u003cx:c r=\"A3\" s=\"7\" t=\"str\">\u003cx:v>当前排班快照\u003c/x:v>\u003c/x:c>\u003cx:c r=\"B3\" s=\"3\" />\u003cx:c r=\"C3\" s=\"3\" />\u003cx:c r=\"D3\" s=\"3\" />\u003cx:c r=\"E3\" s=\"3\" />\u003cx:c r=\"F3\" s=\"3\" />\u003cx:c r=\"G3\" s=\"3\" />\u003cx:c r=\"H3\" s=\"3\" />\u003cx:c r=\"I3\" s=\"3\" />\u003cx:c r=\"J3\" s=\"3\" />\u003c/x:row>\u003cx:row r=\"4\" ht=\"30\" customHeight=\"1\">\u003cx:c r=\"A4\" s=\"11\" t=\"str\">\u003cx:v>日期\u003c/x:v>\u003c/x:c>\u003cx:c r=\"B4\" s=\"11\" t=\"str\">\u003cx:v>值班开始\u003c/x:v>\u003c/x:c>\u003cx:c r=\"C4\" s=\"11\" t=\"str\">\u003cx:v>值班结束\u003c/x:v>\u003c/x:c>\u003cx:c r=\"D4\" s=\"11\" t=\"str\">\u003cx:v>场务\u003c/x:v>\u003c/x:c>\u003cx:c r=\"E4\" s=\"11\" t=\"str\">\u003cx:v>部门\u003c/x:v>\u003c/x:c>\u003cx:c r=\"F4\" s=\"11\" t=\"str\">\u003cx:v>值班分钟\u003c/x:v>\u003c/x:c>\u003cx:c r=\"G4\" s=\"11\" t=\"str\">\u003cx:v>本场候选人数\u003c/x:v>\u003c/x:c>\u003cx:c r=\"H4\" s=\"11\" t=\"str\">\u003cx:v>线下人数\u003c/x:v>\u003c/x:c>\u003cx:c r=\"I4\" s=\"11\" t=\"str\">\u003cx:v>本场面试官\u003c/x:v>\u003c/x:c>\u003cx:c r=\"J4\" s=\"11\" t=\"str\">\u003cx:v>备注\u003c/x:v>\u003c/x:c>\u003c/x:row>\u003cx:row r=\"5\" ht=\"26\" customHeight=\"1\">\u003cx:c r=\"A5\" s=\"16\" t=\"n\">\u003cx:v>46000\u003c/x:v>\u003c/x:c>\u003cx:c r=\"B5\" s=\"18\" t=\"n\">\u003cx:v>0.75\u003c/x:v>\u003c/x:c>\u003cx:c r=\"C5\" s=\"18\" t=\"n\">\u003cx:v>0.75\u003c/x:v>\u003c/x:c>\u003cx:c r=\"D5\" s=\"14\" t=\"str\">\u003cx:v>样例\u003c/x:v>\u003c/x:c>\u003cx:c r=\"E5\" s=\"14\" t=\"str\">\u003cx:v>样例\u003c/x:v>\u003c/x:c>\u003cx:c r=\"F5\" s=\"22\" t=\"n\">\u003cx:v>0\u003c/x:v>\u003c/x:c>\u003cx:c r=\"G5\" s=\"22\" t=\"n\">\u003cx:v>0\u003c/x:v>\u003c/x:c>\u003cx:c r=\"H5\" s=\"22\" t=\"n\">\u003cx:v>0\u003c/x:v>\u003c/x:c>\u003cx:c r=\"I5\" s=\"14\" t=\"str\">\u003cx:v>样例\u003c/x:v>\u003c/x:c>\u003cx:c r=\"J5\" s=\"14\" t=\"str\">\u003cx:v>样例\u003c/x:v>\u003c/x:c>\u003c/x:row>\u003c/x:sheetData>\u003cx:pageMargins left=\"0.7\" right=\"0.7\" top=\"0.75\" bottom=\"0.75\" header=\"0.3\" footer=\"0.3\" />\u003c/x:worksheet>", "_rels/.rels": "﻿\u003c?xml version=\"1.0\" encoding=\"utf-8\"?>\u003cRelationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\u003cRelationship Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"/xl/workbook.xml\" Id=\"R06648cc9c0a542dc\" />\u003c/Relationships>", "xl/_rels/workbook.xml.rels": "﻿\u003c?xml version=\"1.0\" encoding=\"utf-8\"?>\u003cRelationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\u003cRelationship Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"/xl/styles.xml\" Id=\"Rc3caf53aa35240b2\" />\u003cRelationship Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme\" Target=\"/xl/theme/theme1.xml\" Id=\"R0155a923e77c4f3f\" />\u003cRelationship Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings\" Target=\"/xl/sharedStrings.xml\" Id=\"Rb2f603f6d6314da1\" />\u003cRelationship Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"/xl/worksheets/sheet1.xml\" Id=\"Redf2a4082fb04b7d\" />\u003cRelationship Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"/xl/worksheets/sheet2.xml\" Id=\"R0895068d6ed14d49\" />\u003cRelationship Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"/xl/worksheets/sheet3.xml\" Id=\"R920121d54e6e47b8\" />\u003c/Relationships>", "[Content_Types].xml": "﻿\u003c?xml version=\"1.0\" encoding=\"utf-8\"?>\u003cTypes xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">\u003cDefault Extension=\"xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\" />\u003cDefault Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\" />\u003cOverride PartName=\"/xl/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml\" />\u003cOverride PartName=\"/xl/theme/theme1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.theme+xml\" />\u003cOverride PartName=\"/xl/sharedStrings.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml\" />\u003cOverride PartName=\"/xl/worksheets/sheet1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\" />\u003cOverride PartName=\"/xl/worksheets/sheet2.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\" />\u003cOverride PartName=\"/xl/worksheets/sheet3.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\" />\u003c/Types>"}, "sheets": [{"name": "候选人面试安排", "headers": ["学号", "候选人", "面试方式", "安排状态", "日期", "开始时间", "结束时间", "面试时长（分钟）", "面试官", "本场场务", "待安排原因"], "widths": [20, 14, 12, 12, 15, 13, 13, 21, 14, 28, 44], "types": ["text", "text", "text", "text", "date", "time", "time", "decimal", "text", "text", "text"], "path": "xl/worksheets/sheet1.xml", "styles": [14, 14, 14, 14, 16, 18, 18, 20, 14, 14, 14]}, {"name": "面试官排班", "headers": ["日期", "时段开始", "时段结束", "面试官", "部门", "安排人数", "线上人数", "线下人数", "首场面试", "末场结束", "实际面试分钟", "备注"], "widths": [15, 13, 13, 14, 32, 13, 13, 13, 13, 13, 20, 44], "types": ["date", "time", "time", "text", "text", "number", "number", "number", "time", "time", "decimal", "text"], "path": "xl/worksheets/sheet2.xml", "styles": [16, 18, 18, 14, 14, 22, 22, 22, 18, 18, 20, 14]}, {"name": "场务排班", "headers": ["日期", "值班开始", "值班结束", "场务", "部门", "值班分钟", "本场候选人数", "线下人数", "本场面试官", "备注"], "widths": [15, 13, 13, 14, 32, 14, 19, 13, 50, 44], "types": ["date", "time", "time", "text", "text", "number", "number", "number", "text", "text"], "path": "xl/worksheets/sheet3.xml", "styles": [16, 18, 18, 14, 14, 22, 22, 22, 14, 14]}]};
+root.PlannerWorkbookTemplate=template;
+if(typeof module!=="undefined")module.exports=template;
+})(typeof globalThis!=="undefined"?globalThis:this);
+
+/* Offline XLSX data export using the pre-authored workbook layout. */
+(function(root){
+ 'use strict';
+ const template=typeof module!=='undefined'?require('./excel-template.js'):root.PlannerWorkbookTemplate;
+ const esc=v=>String(v??'').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
+ const excelDate=date=>(Date.parse(date+'T00:00:00Z')-Date.UTC(1899,11,30))/86400000;
+ function column(n){let out='';for(n++;n>0;n=Math.floor((n-1)/26))out=String.fromCharCode(65+(n-1)%26)+out;return out;}
+ function makeRows(data,result){
+  const sessions=new Map(result.sessions.map(s=>[s.id,s])),staff=new Map(data.staff.map(p=>[p.id,p]));
+  const candidates=[...result.assignments,...result.unassigned].map(c=>{
+   const s=sessions.get(c.session);
+   return [c.id,c.name,c.online?'线上':'线下',c.status,s?excelDate(s.date):null,s?c.start/1440:null,s?c.end/1440:null,s?c.duration:null,s?staff.get(c.interviewer).name:'',s?s.fieldStaff.map(p=>p.name).join('、'):'',c.reason||''];
+  });
+  const interviewerRows=[],fieldRows=[];
+  for(const s of result.sessions){
+   for(const p of s.interviewers){
+    const a=result.assignments.filter(a=>a.session===s.id&&a.interviewer===p.id),online=a.filter(a=>a.online).length;
+    interviewerRows.push([excelDate(s.date),s.start/1440,s.end/1440,p.name,p.department,a.length,online,a.length-online,a.length?Math.min(...a.map(a=>a.start))/1440:null,a.length?Math.max(...a.map(a=>a.end))/1440:null,a.reduce((total,a)=>total+a.durationSeconds,0)/60,s.warnings.join('；')]);
+   }
+   for(const p of s.fieldStaff)fieldRows.push([excelDate(s.date),s.start/1440,s.end/1440,p.name,p.department,s.end-s.start,s.count,s.offline,s.interviewers.map(p=>p.name).join('、'),s.warnings.join('；')]);
+  }
+  return [candidates,interviewerRows,fieldRows];
+ }
+ function worksheet(spec,rows,summary,intern){
+  const original=template.files[spec.path],prefix=original.match(/<x:sheetData>([\s\S]*?)<x:row r="5"/)[1].replace(/<x:row r="3"[\s\S]*?<\/x:row>/,`<x:row r="3" ht="24" customHeight="1"><x:c r="A3" s="7" t="inlineStr"><x:is><x:t xml:space="preserve">${esc(summary)}</x:t></x:is></x:c></x:row>`);
+  const body=rows.map((row,i)=>{
+   const r=i+5,cells=row.map((v,j)=>{
+    const ref=column(j)+r,style=spec.styles[j];
+    if(v===null||v===undefined||v==='')return `<x:c r="${ref}" s="${style}"/>`;
+    if(typeof v==='number'){if(!Number.isFinite(v))throw Error('导出数据含无效数值');return `<x:c r="${ref}" s="${style}" t="n"><x:v>${v}</x:v></x:c>`;}
+    // Always explicit text: preserve leading zeros, never turn names into formulas.
+    return `<x:c r="${ref}" s="${style}" t="s"><x:v>${intern(String(v))}</x:v></x:c>`;
+   }).join('');
+   const lines=Math.max(1,...row.map((v,j)=>typeof v==='string'?Math.ceil([...v].reduce((n,c)=>n+(c.charCodeAt(0)>255?2:1),0)/Math.max(1,spec.widths[j]-2)):1));
+   return `<x:row r="${r}" ht="${Math.max(26,lines*17+6)}" customHeight="1">${cells}</x:row>`;
+  }).join('');
+  const last=column(spec.headers.length-1)+(rows.length+4);
+  return original.replace(/<x:sheetData>[\s\S]*?<\/x:sheetData>/,`<x:sheetData>${prefix}${body}</x:sheetData><x:autoFilter ref="A4:${last}"/>`).replace('</x:sheetPr>',`</x:sheetPr><x:dimension ref="A1:${last}"/>`);
+ }
+ const crcTable=Array.from({length:256},(_,i)=>{for(let k=0;k<8;k++)i=(i&1)?0xedb88320^(i>>>1):i>>>1;return i>>>0;});
+ function crc32(bytes){let crc=0xffffffff;for(const b of bytes)crc=crcTable[(crc^b)&255]^(crc>>>8);return (crc^0xffffffff)>>>0;}
+ // ZIP STORE keeps the generated workbook dependency-free in both online/offline HTML.
+ function zip(files){
+  const enc=new TextEncoder(),local=[],central=[];let offset=0,centralSize=0;
+  for(const [path,xml] of Object.entries(files)){
+   const name=enc.encode(path),body=enc.encode(xml),crc=crc32(body),header=new Uint8Array(30+name.length),h=new DataView(header.buffer);
+   h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x0800,true);h.setUint16(12,33,true);h.setUint32(14,crc,true);h.setUint32(18,body.length,true);h.setUint32(22,body.length,true);h.setUint16(26,name.length,true);header.set(name,30);local.push(header,body);
+   const record=new Uint8Array(46+name.length),d=new DataView(record.buffer);d.setUint32(0,0x02014b50,true);d.setUint16(4,20,true);d.setUint16(6,20,true);d.setUint16(8,0x0800,true);d.setUint16(14,33,true);d.setUint32(16,crc,true);d.setUint32(20,body.length,true);d.setUint32(24,body.length,true);d.setUint16(28,name.length,true);d.setUint32(42,offset,true);record.set(name,46);central.push(record);centralSize+=record.length;offset+=header.length+body.length;
+  }
+  const end=new Uint8Array(22),view=new DataView(end.buffer),count=Object.keys(files).length;view.setUint32(0,0x06054b50,true);view.setUint16(8,count,true);view.setUint16(10,count,true);view.setUint32(12,centralSize,true);view.setUint32(16,offset,true);
+  const out=new Uint8Array(offset+centralSize+22);let at=0;for(const p of [...local,...central,end]){out.set(p,at);at+=p.length;}return out;
+ }
+ function bytes(data,result){
+  const rows=makeRows(data,result),files={...template.files},summaries=[
+   `当前方案：共 ${result.total} 人，已安排 ${result.matched} 人，待安排 ${result.unassigned.length} 人；参考 ${result.config.duration} 分钟，平均实际 ${result.averageDuration==null?'—':result.averageDuration.toFixed(2)} 分钟 / 人。`,
+   `当前方案：共 ${rows[1].length} 个面试官班次；候选人逐人明细见“候选人面试安排”。`,
+   `当前方案：共 ${rows[2].length} 个场务班次；场务按生成时段完整值班。`
+  ];
+  const strings=[],indices=new Map();let stringCount=0;
+  const intern=value=>{stringCount++;if(!indices.has(value)){indices.set(value,strings.length);strings.push(value);}return indices.get(value);};
+  template.sheets.forEach((s,i)=>files[s.path]=worksheet(s,rows[i],summaries[i],intern));
+  files['xl/sharedStrings.xml']=`<?xml version="1.0" encoding="utf-8"?><x:sst xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${stringCount}" uniqueCount="${strings.length}">${strings.map(s=>`<x:si><x:t xml:space="preserve">${esc(s)}</x:t></x:si>`).join('')}</x:sst>`;
+  return zip(files);
+ }
+ root.PlannerExcel={bytes,makeRows};if(typeof module!=='undefined')module.exports=root.PlannerExcel;
+})(typeof globalThis!=='undefined'?globalThis:this);
+</script><script>(()=>{
+  'use strict';
+  const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const hm=n=>{const sec=Math.round(n*60),parts=[Math.floor(sec/3600),Math.floor(sec/60)%60,sec%60];return parts.slice(0,parts[2]?3:2).map(v=>String(v).padStart(2,'0')).join(':');};
+  const minutes=n=>n==null?'—':Number(n.toFixed(2));
+  const durationLabel=n=>n==null?'—':`${Math.floor(n/60)}分${n%60?String(n%60)+'秒':''}`;
+  const baseRaw=JSON.parse($('embedded-data').textContent),demoRaw=JSON.parse($('embedded-demo').textContent);let raw=structuredClone(baseRaw);
+  const storageKey='volunteer-planner-v2:'+location.pathname;
+  let rosterKind='candidates',rosterPage=1,selected=new Set(),history=[],editing=null,confirmAction=null,activePage='overview';
+  let config=JSON.parse($('embedded-config').textContent),data,result,metric='actual',page=1,toastTimer;
+  const freshConfig=()=>({...structuredClone(Planner.defaults),enabled:data.sessions.map(s=>s.id)});
+  const staffName=id=>data.staff.find(p=>p.id===id)?.name||'—';
+  const slotLabel=id=>data.sessions.find(s=>s.id===id)?.label||'待安排';
+  function toast(msg){$('toast').textContent=msg;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').textContent='',4500);}
+  function download(name,content,type='text/plain;charset=utf-8'){
+    const url=URL.createObjectURL(new Blob([content],{type})),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
+  }
+  function csvCell(v){let s=String(v??'');if(/^[=+@\-\r]/.test(s)||(/^\t/.test(s)&&!/^\t\d+$/.test(s)))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';}
+  function csv(name,rows){download(name,'\ufeff'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n'),'text/csv;charset=utf-8');toast('已导出 CSV 文件');}
+  function candidateCSV(items,name){
+    csv(name,[['学号（文本）','候选人','面试方式','安排状态','日期','开始时间','结束时间','面试时长（分钟）','面试官','本场场务','待安排原因','原始可用时段'],...items.map(c=>{
+      const s=result.sessions.find(s=>s.id===c.session);
+      return ['\t'+c.id,c.name,c.online?'线上':'线下',c.status,s?.date||'',s?hm(c.start):'',s?hm(c.end):'',c.duration||'',s?staffName(c.interviewer):'',s?s.fieldStaff.map(p=>p.name).join('、'):'',c.reason||'',c.slots.map(slotLabel).join('、')];
+    })]);
+  }
+  function navigate(id){
+    document.querySelectorAll('.section').forEach(e=>e.classList.toggle('active',e.id===id));
+    document.querySelectorAll('.nav button').forEach(e=>{e.classList.toggle('active',e.dataset.page===id);e.setAttribute('aria-current',e.dataset.page===id?'page':'false');});
+    activePage=id;
+    const titles={overview:['排班总览','覆盖人数、面试时长，一眼看清。'],schedule:['面试安排','查看每位候选人的时间与面试官。'],staff:['人员排班','协调面试官与场务的分工。'],data:['名单管理','导入、编辑名单，自动同步排班。']};
+    [$('pageTitle').textContent,$('introText').textContent]=titles[id];
+    $('settings').hidden=id==='data';$('periodLabel').parentElement.hidden=id==='data';$('globalNotice').hidden=id==='data';
+  }
+  function hydrateSettings(){
+    for(const k of ['duration','gap','reserve','field'])$(k).value=config[k];
+    $('sessionToggles').innerHTML=data.sessions.map(s=>`<label><input type="checkbox" value="${esc(s.id)}" aria-label="${esc(s.label)}" ${config.enabled.includes(s.id)?'checked':''}><span class="session-text"><strong>${Number(s.date.slice(5,7))}月${s.day}日</strong><span>${hm(s.start)}–${hm(s.end)}</span></span></label>`).join('');
+    $('sessionFilter').innerHTML='<option value="all">全部时段</option>'+data.sessions.map(s=>`<option value="${s.id}">${s.label}</option>`).join('');
+  }
+  function compute(){
+    const next=Planner.solve(data,config),errors=Planner.validate(data,next);if(errors.length)throw Error('校验失败：'+errors.join('；'));
+    result=next;page=1;render();
+    $('embedded-data').textContent=JSON.stringify(raw).replace(/</g,'\\u003c');
+    $('embedded-config').textContent=JSON.stringify(config).replace(/</g,'\\u003c');
+    persist();
+  }
+  function heatColor(s){
+    if(!s.enabled||!s.count)return {bg:'#f1f3f5',fg:'#929da8'};
+    const val=metric==='budget'?s.average:s.scheduledAverage, ratio=val/config.duration;
+    if(ratio<0.5)return {bg:'#2563eb',fg:'#fff'};
+    if(ratio<0.8)return {bg:'#93c5fd',fg:'#153e75'};
+    if(ratio<1)return {bg:'#bfdbfe',fg:'#194b88'};
+    return {bg:'#eff6ff',fg:'#37648f'};
+  }
+  function renderHeat(){
+    const dates=[...new Set(data.sessions.map(s=>s.date))],ranges=[...new Set(data.sessions.map(s=>s.start+'|'+s.end))].map(k=>k.split('|').map(Number)).sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
+    $('heatmap').style.gridTemplateColumns=dates.length?`83px repeat(${dates.length},minmax(108px,1fr))`:'1fr';
+    if(!dates.length){$('heatmap').innerHTML='<div class="empty">导入名单后显示面试时长</div>';$('heatFormula').textContent='';return;}
+    let html='<div></div>'+dates.map(d=>`<div class="heat-head">${Number(d.slice(5,7))} 月 ${Number(d.slice(8))} 日<small>周${'日一二三四五六'[new Date(d+'T00:00:00Z').getUTCDay()]}</small></div>`).join('');
+    for(const [start,end] of ranges){
+      html+=`<div class="heat-axis">${hm(start)}–${hm(end)}<span>${end-start} 分钟 / 场</span></div>`;
+      for(const date of dates){
+        const s=result.sessions.find(s=>s.date===date&&s.start===start&&s.end===end);
+        if(!s){html+='<div class="heatcell off"><b>—</b><span>无此时段</span></div>';continue;}
+        const v=metric==='budget'?s.average:s.scheduledAverage,c=heatColor(s);
+        html+=`<button class="heatcell ${s.enabled?'':'off'}" data-slot="${s.id}" style="background:${c.bg};color:${c.fg}" aria-label="${s.label}，${v==null?'暂无安排':v.toFixed(2)+' 分钟每人'}，${s.count} 位候选人" title="${s.label}\n面试官 ${s.interviewers.length} 人；场务 ${s.fieldStaff.length} 人\n已排 ${s.count} 人；线上 ${s.online} 人；线下 ${s.offline} 人\n人均可用 ${s.average?.toFixed(3)??'—'} 分钟；实际排定 ${minutes(s.scheduledAverage)} 分钟"><b>${v==null?'—':v.toFixed(2)}${v==null?'':'<small>分 / 人</small>'}</b><span>${s.enabled?`${s.count} 人 · ${s.interviewers.length} 位面试官`:'时段未启用'}</span></button>`;
+      }
+    }
+    $('heatmap').innerHTML=html;
+    $('heatFormula').textContent=metric==='budget'?'可用时间 ÷ 人数，包含未使用的时间。':'实际面试总分钟 ÷ 人数；参考 '+config.duration+' 分钟。';
+    document.querySelectorAll('[data-metric]').forEach(b=>b.classList.toggle('active',b.dataset.metric===metric));
+  }
+  function table(items,preview=false){
+    const headers=['候选人','学号','面试方式','面试日期 / 时段','具体时间','实际时长','面试官','状态'];
+    return `<table><thead><tr>${headers.map(h=>`<th scope="col">${h}</th>`).join('')}</tr></thead><tbody>${items.length?items.map(c=>`<tr><td><strong>${esc(c.name)}</strong></td><td class="id">${esc(c.id)}</td><td><span class="tag ${c.online?'online':''}">${c.online?'线上':'线下'}</span></td><td>${c.session?esc(slotLabel(c.session)):`<span title="${esc(c.slots.map(slotLabel).join('、'))}">${esc(c.reason)}</span>`}</td><td>${c.session?`<strong>${hm(c.start)}–${hm(c.end)}</strong>`:'—'}</td><td>${durationLabel(c.durationSeconds)}</td><td>${esc(staffName(c.interviewer))}</td><td><span class="tag ${c.session?'good':'warn'}">${c.status}</span></td></tr>`).join(''):'<tr><td class="empty" colspan="8">没有符合筛选条件的候选人</td></tr>'}</tbody></table>`;
+  }
+  function filtered(){
+    const q=$('search').value.trim().toLowerCase(),s=$('sessionFilter').value,m=$('modeFilter').value,st=$('statusFilter').value;
+    return [...result.assignments,...result.unassigned].filter(c=>(!q||[c.name,c.id,staffName(c.interviewer)].some(v=>v.toLowerCase().includes(q)))&&(s==='all'||c.session===s||(!c.session&&c.slots.includes(s)))&&(m==='all'||c.online===(m==='online'))&&(st==='all'||Boolean(c.session)===(st==='assigned')));
+  }
+  function renderSchedule(){
+    const list=filtered(),pages=Math.max(1,Math.ceil(list.length/40));page=Math.min(Math.max(page,1),pages);
+    $('scheduleTable').innerHTML=table(list.slice((page-1)*40,page*40));
+    $('paginationText').textContent=`共 ${list.length} 人${list.length?`，显示 ${(page-1)*40+1}–${Math.min(page*40,list.length)} 人`:''}`;
+    $('pageNumber').textContent=`${page} / ${pages}`;$('prevPage').disabled=page<=1;$('nextPage').disabled=page>=pages;
+    $('scheduleCaption').textContent=`${result.matched} 人已安排，${result.unassigned.length} 人待安排。`;
+  }
+  function renderStaff(){
+    $('staffTable').innerHTML='<table><thead><tr><th>工作人员</th>'+data.sessions.map(s=>`<th>${Number(s.date.slice(5,7))} 月 ${s.day} 日<br>${hm(s.start)}–${hm(s.end)}</th>`).join('')+'<th>面试人数</th><th>场务班次</th></tr></thead><tbody>'+data.staff.map(p=>{
+      const w=result.workloads.find(w=>w.id===p.id);
+      return `<tr><td><strong>${esc(p.name)}</strong><span class="role-label">${esc(p.department)}</span></td>`+result.sessions.map(s=>{
+        const i=p.interview.includes(s.id),f=p.field.includes(s.id),key=p.id+'|'+s.id,value=config.overrides[key]||'auto',role=s.roles[p.id],count=s.lanes.find(l=>l.staff===p.id)?.count||0;
+        if(!i&&!f)return '<td class="muted">—</td>';
+        const opts=[['auto','自动'],...(i?[['interview','指定面试官']]:[]),...(f?[['field','指定场务']]:[]),['off','不安排']];
+        return `<td><select data-role-key="${key}" aria-label="${esc(p.name)} ${s.label}角色" ${s.enabled?'':'disabled'}>${opts.map(([v,t])=>`<option value="${v}" ${v===value?'selected':''}>${t}</option>`).join('')}</select><span class="role-label">${!s.enabled?'未启用':role==='interview'?'面试 '+count+' 人':role==='field'?'场务 '+(s.end-s.start)+' 分钟':'未排班'}</span></td>`;
+      }).join('')+`<td>${w.count}</td><td>${w.fieldShifts}</td></tr>`;
+    }).join('')+'</tbody></table>';
+    const max=Math.max(1,...result.workloads.map(w=>w.interviewMinutes+w.fieldMinutes));
+    $('staffChart').innerHTML=[...result.workloads].sort((a,b)=>(b.interviewMinutes+b.fieldMinutes)-(a.interviewMinutes+a.fieldMinutes)).map(w=>`<div class="work-row"><span>${esc(w.name)}</span><div class="work-track" title="面试 ${minutes(w.interviewMinutes)} 分钟，场务 ${w.fieldMinutes} 分钟"><i style="width:${100*w.interviewMinutes/max}%"></i><i class="field" style="width:${100*w.fieldMinutes/max}%"></i></div><span class="number">${w.count} 人 / ${w.fieldShifts} 场场务</span></div>`).join('');
+  }
+  function render(){
+    $('settingsSummary').textContent=`参考 ${config.duration} 分钟 · 场务 ${config.field} 人 / 场`;
+    const online=data.candidates.filter(c=>c.online).length,active=new Set(result.sessions.flatMap(s=>s.interviewers.map(p=>p.id))).size;
+    const metrics=[['候选人总数',data.candidates.length,'人',`线下 ${data.candidates.length-online} 人 · 线上 ${online} 人`],['已安排面试',result.matched,'人',`<strong>覆盖率 ${(result.total?100*result.matched/result.total:0).toFixed(1)}%</strong> · 待安排 ${result.unassigned.length} 人`],['参与面试官',active,'位',`工作人员 ${data.staff.length} 位 · 每场 ${config.field} 位场务`],['平均实际面试',minutes(result.averageDuration),'分钟',`参考 ${config.duration} 分钟 · ${result.compressedCount} 人已缩短时长`]];
+    $('metrics').innerHTML=metrics.map(([title,value,unit,foot],i)=>`<div class="metric"><label>${title}<span>0${i+1}</span></label><div class="value">${value}<em>${unit}</em></div><div class="foot">${foot}</div></div>`).join('');
+    const warns=result.sessions.flatMap(s=>s.warnings.map(w=>s.label+'：'+w));
+    const pending=result.unassigned.length;
+    const compression=result.compressedCount?`${result.compressedCount} 人已缩短时长，平均 ${minutes(result.averageDuration)} 分钟。`:'';
+    $('globalNotice').innerHTML=pending||warns.length?`<div class="notice"><strong>${pending?pending+' 人待安排':'人员配置需检查'}</strong>${compression?' · '+compression:''}<details><summary>查看原因</summary>${warns.map(esc).join('<br>')||'请在面试安排中查看原因，或调整可用时间和人员。'}</details></div>`:compression?`<div class="notice ok">已安排全部 ${result.total} 人 · ${compression}</div>`:'';
+    renderHeat();
+    $('capacityList').innerHTML=result.sessions.map(s=>`<div><div class="capacity-title"><strong style="font-weight:500">${s.label}</strong><span>${s.count} / ${s.standardCapacity} 人</span></div><div class="capacity-track"><i style="width:${s.standardCapacity?Math.min(100,100*s.count/s.standardCapacity):s.count?100:0}%"></i></div><div class="capacity-meta"><span>${s.interviewers.length} 位面试官 · ${s.fieldStaff.length} 位场务</span><span>${s.count?'实际 '+durationLabel(s.durationSeconds):'暂无面试'}</span></div></div>`).join('')||'<div class="empty">暂无时段</div>';
+    $('slotBadge').textContent=`${result.sessions.filter(s=>s.enabled).length} 个时段`;
+    $('capacityNote').textContent=`参考容量按 ${config.duration} 分钟计算，超出时自动缩短面试。`;
+    $('previewTable').innerHTML=table(result.assignments.slice(0,5),true);
+    renderSchedule();renderStaff();
+    renderSources();renderRoster();
+    $('dataStatus').textContent=data.candidates.length||data.staff.length?`已识别 ${data.candidates.length} 位候选人 · ${data.staff.length} 位工作人员`:'';
+    $('footerStatus').textContent=`已安排 ${result.matched} / ${result.total} 人`;
+    const dates=[...new Set(data.sessions.map(s=>s.date))];$('periodLabel').textContent=dates.length?`${dates[0]}${dates.length>1?' — '+dates.at(-1):''}`:'';
+    $('brandYear').textContent='VOLUNTEER PLANNER';$('footerBrand').textContent='志愿者面试工作台';
+    $('exportExcel').disabled=!data.candidates.length&&!data.staff.length;
+    $('exportHeat').disabled=!data.sessions.length;
+    document.body.classList.add('ready');
+  }
+  function persist(){
+    if(location.protocol==='file:'){$('saveStatus').textContent='离线运行';return;}
+    try{localStorage.setItem(storageKey,JSON.stringify({raw,config}));$('saveStatus').textContent='已保存到本机';}
+    catch{$('saveStatus').textContent='请保存网页备份';}
+  }
+  function applyRaw(next,reset=false,remember=true,restoredConfig=null){
+    next=Roster.canonical(next);
+    const nd=Planner.normalize(next.candidates,next.staff,next.sources,next.year);
+    const nc=restoredConfig|| (reset?{...structuredClone(Planner.defaults),duration:config.duration,gap:config.gap,reserve:config.reserve,field:config.field,enabled:nd.sessions.map(s=>s.id),overrides:{}}:Roster.reconcile(config,data,nd));
+    const nr=Planner.solve(nd,nc),errors=Planner.validate(nd,nr);if(errors.length)throw Error(errors.join('；'));
+    if(remember){history.push({raw:structuredClone(raw),config:structuredClone(config)});if(history.length>20)history.shift();}
+    raw=next;data=nd;config=nc;rosterPage=1;selected.clear();$('importYear').value=raw.year;
+    if(reset){rosterKind='candidates';$('rosterSearch').value='';$('candidateFile').value='';$('staffFile').value='';}
+    hydrateSettings();compute();
+  }
+  function renderSources(){
+    for(const [source,file,index,count] of [['candidateSource','candidateFile',0,data.candidates.length],['staffSource','staffFile',1,data.staff.length]]){
+      const filename=$(file).files[0]?.name||raw.sources[index]||'';
+      $(source).textContent=filename|| (count?`${count} 人 · 手动录入`:'尚未选择文件');$(source).title=filename;
+    }
+  }
+  function rosterFiltered(){
+    const q=$('rosterSearch').value.trim().toLowerCase();return data[rosterKind].filter(p=>!q||[p.name,p.id,p.department||''].some(v=>v.toLowerCase().includes(q)));
+  }
+  function rosterVisible(){return rosterFiltered().slice((rosterPage-1)*30,rosterPage*30);}
+  function timeChips(windows){
+    return windows.length?`<div class="time-chips" title="${esc(Roster.windowsText(windows))}">${windows.slice(0,2).map(w=>`<span>${esc(w.date.slice(5))} ${hm(w.start)}–${hm(w.end)}</span>`).join('')}${windows.length>2?`<span>+${windows.length-2}</span>`:''}</div>`:'<span class="muted">未填写</span>';
+  }
+  function renderRoster(){
+    const candidate=rosterKind==='candidates',list=rosterFiltered(),pages=Math.max(1,Math.ceil(list.length/30));rosterPage=Math.max(1,Math.min(rosterPage,pages));const shown=rosterVisible();
+    $('candidateTab').textContent=`候选人 · ${data.candidates.length}`;$('staffTab').textContent=`工作人员 · ${data.staff.length}`;
+    document.querySelectorAll('[data-roster]').forEach(b=>{b.classList.toggle('active',b.dataset.roster===rosterKind);b.setAttribute('aria-pressed',String(b.dataset.roster===rosterKind));});
+    $('addRecord').textContent=candidate?'＋ 新增候选人':'＋ 新增工作人员';$('rosterSearch').placeholder=candidate?'搜索姓名或编号':'搜索姓名或部门';
+    const heads=candidate?['姓名','编号 / 学号','面试方式','可用时间']:['姓名','部门','面试官时间','场务时间'];
+    $('rosterTable').innerHTML=`<table><thead><tr><th class="check-cell"><input id="rosterSelectAll" type="checkbox" aria-label="选择本页全部" ${shown.length&&shown.every(p=>selected.has(p.id))?'checked':''} ${shown.length?'':'disabled'}></th>${heads.map(h=>`<th>${h}</th>`).join('')}<th>操作</th></tr></thead><tbody>${shown.length?shown.map(p=>`<tr><td class="check-cell"><input type="checkbox" aria-label="选择 ${esc(p.name)}" data-select-key="${esc(p.id)}" ${selected.has(p.id)?'checked':''}></td><td><strong>${esc(p.name)}</strong></td>${candidate?`<td class="id">${esc(p.id)}</td><td><span class="tag ${p.online?'online':''}">${p.online?'线上':'线下'}</span></td><td>${timeChips(p.windows)}</td>`:`<td>${esc(p.department)||'—'}</td><td>${timeChips(p.interviewWindows)}</td><td>${timeChips(p.fieldWindows)}</td>`}<td><div class="row-actions"><button class="text" data-edit="${esc(p.id)}" aria-label="编辑 ${esc(p.name)}">编辑</button><button class="text danger" data-delete="${esc(p.id)}" aria-label="删除 ${esc(p.name)}">删除</button></div></td></tr>`).join(''):`<tr><td colspan="6" class="empty">${list.length?'没有匹配的记录':data[rosterKind].length?'没有匹配的记录':'暂无'+(candidate?'候选人':'工作人员')+'，可导入问卷或手动新增'}</td></tr>`}</tbody></table>`;
+    $('rosterCount').textContent=`共 ${list.length} 人${selected.size?' · 已选 '+selected.size+' 人':''}`;$('rosterPage').textContent=`${rosterPage} / ${pages}`;
+    $('rosterPrev').disabled=rosterPage<=1;$('rosterNext').disabled=rosterPage>=pages;$('undoEdit').disabled=!history.length;
+    $('deleteSelected').hidden=!selected.size;$('deleteSelected').textContent=`删除所选 (${selected.size})`;
+    $('clearData').disabled=!data.candidates.length&&!data.staff.length;
+  }
+  function askReplace(message,action){
+    if(!data.candidates.length&&!data.staff.length){action();return;}
+    $('confirmTitle').textContent='确认操作';$('confirmText').textContent=message;confirmAction=action;$('confirmDialog').showModal();
+  }
+  function deleteRecords(keys){
+    if(!keys.length)return;
+    askReplace(`删除 ${keys.length} 位${rosterKind==='candidates'?'候选人':'工作人员'}？排班将自动更新，可撤销。`,()=>{applyRaw(Roster.remove(raw,rosterKind,keys));toast(`已删除 ${keys.length} 人，可撤销`);});
+  }
+  function localDate(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+  function openEditor(key){
+    const candidate=rosterKind==='candidates',person=data[rosterKind].find(p=>p.id===key),asDraft=ws=>(ws||[]).map(w=>({date:w.date,start:hm(w.start),end:hm(w.end)}));
+    editing={key,windows:{interview:asDraft(candidate?person?.windows:person?.interviewWindows),field:asDraft(person?.fieldWindows)}};
+    $('recordTitle').textContent=(key?'编辑':'新增')+(candidate?'候选人':'工作人员');$('recordForm').reset();$('recordError').textContent='';
+    $('candidateIdField').hidden=!candidate;$('candidateModeField').hidden=!candidate;$('staffDepartmentField').hidden=candidate;$('editId').required=candidate;
+    $('editName').value=person?.name||'';$('editDepartment').value=person?.department||'';$('editMode').value=person?.online?'是':'否';
+    let index=1;while(data.candidates.some(p=>p.id==='V'+String(index).padStart(4,'0')))index++;
+    $('editId').value=person?.id||'V'+String(index).padStart(4,'0');renderWindowEditor();$('recordDialog').showModal();$('editName').focus();
+  }
+  function renderWindowEditor(){
+    const groups=rosterKind==='candidates'?[['interview','可用时间']]:[['interview','面试官时间'],['field','场务时间']];
+    $('editorWindows').innerHTML=groups.map(([key,title])=>`<section class="window-group"><div class="window-head"><h3>${title}</h3><button type="button" class="text small" data-add-window="${key}">＋ 添加${title}</button></div><div class="window-rows">${editing.windows[key].length?editing.windows[key].map((w,i)=>`<div class="window-row" data-window="${key}:${i}"><label>日期<input type="date" data-part="date" aria-label="${title} ${i+1} 日期" value="${esc(w.date)}" required></label><label>开始<input type="text" inputmode="numeric" maxlength="5" placeholder="18:00" data-part="start" aria-label="${title} ${i+1} 开始" value="${esc(w.start)}" required pattern="[0-9]{1,2}:[0-9]{2}"></label><label>结束<input type="text" inputmode="numeric" maxlength="5" placeholder="20:00" data-part="end" aria-label="${title} ${i+1} 结束" value="${esc(w.end)}" required pattern="[0-9]{1,2}:[0-9]{2}"></label><button type="button" class="text danger" data-remove-window="${key}:${i}" aria-label="删除${title} ${i+1}">×</button></div>`).join(''):'<p class="window-empty">暂无时段，点击添加</p>'}</div></section>`).join('');
+  }
+  function readWindowDraft(){
+    $('editorWindows').querySelectorAll('[data-window]').forEach(row=>{const [key,i]=row.dataset.window.split(':');for(const part of ['date','start','end'])editing.windows[key][Number(i)][part]=row.querySelector(`[data-part="${part}"]`).value;});
+  }
+
+  // Read the first XLSX sheet in-browser. Only data is read; formulas/macros are not executed.
+  async function readXlsx(file){
+    if(!file||!file.name.toLowerCase().endsWith('.xlsx'))throw Error('请选择 .xlsx 格式文件。');
+    if(file.size>20*1024*1024)throw Error('文件超过 20 MB，请仅保留问卷答卷数据。');
+    const bytes=new Uint8Array(await file.arrayBuffer()),view=new DataView(bytes.buffer),decoder=new TextDecoder();
+    let eocd=-1;for(let i=bytes.length-22;i>=Math.max(0,bytes.length-65557);i--)if(view.getUint32(i,true)===0x06054b50){eocd=i;break;}
+    if(eocd<0)throw Error('Excel 文件结构无法识别。');
+    const entries=new Map();let pos=view.getUint32(eocd+16,true),count=view.getUint16(eocd+10,true);
+    for(let i=0;i<count;i++){
+      if(view.getUint32(pos,true)!==0x02014b50)throw Error('Excel 压缩目录损坏。');
+      const method=view.getUint16(pos+10,true),size=view.getUint32(pos+20,true),expanded=view.getUint32(pos+24,true),nl=view.getUint16(pos+28,true),el=view.getUint16(pos+30,true),cl=view.getUint16(pos+32,true),offset=view.getUint32(pos+42,true),name=decoder.decode(bytes.slice(pos+46,pos+46+nl));
+      if(expanded>30*1024*1024)throw Error('工作表过大，请缩小数据范围。');
+      entries.set(name,{method,size,offset});pos+=46+nl+el+cl;
+    }
+    async function xml(name){
+      const e=entries.get(name);if(!e)throw Error('Excel 缺少 '+name);
+      const at=e.offset+30+view.getUint16(e.offset+26,true)+view.getUint16(e.offset+28,true),compressed=bytes.slice(at,at+e.size);let out;
+      if(e.method===0)out=compressed;else if(e.method===8){
+        if(typeof DecompressionStream==='undefined')throw Error('当前浏览器不支持 Excel 解压，请使用新版 Chrome 或 Edge，或使用附带的生成脚本。');
+        try{out=new Uint8Array(await new Response(new Blob([compressed]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());}catch{throw Error('Excel 解压失败，请使用新版 Chrome 或 Edge，或使用附带的生成脚本。');}
+      }else throw Error('不支持此 Excel 压缩格式。');
+      const doc=new DOMParser().parseFromString(decoder.decode(out),'application/xml');if(doc.getElementsByTagName('parsererror').length)throw Error('Excel XML 数据损坏。');return doc;
+    }
+    const all=(node,tag)=>Array.from(node.getElementsByTagNameNS('*',tag));
+    const shared=entries.has('xl/sharedStrings.xml')?all(await xml('xl/sharedStrings.xml'),'si').map(si=>all(si,'t').map(t=>t.textContent).join('')):[];
+    const book=await xml('xl/workbook.xml'),sheet=all(book,'sheet')[0];if(!sheet)throw Error('Excel 没有工作表。');
+    const rid=sheet.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id'),rels=await xml('xl/_rels/workbook.xml.rels'),rel=all(rels,'Relationship').find(r=>r.getAttribute('Id')===rid);if(!rel)throw Error('找不到首张工作表。');
+    let target=rel.getAttribute('Target');target=target.startsWith('/')?target.slice(1):'xl/'+target;
+    const rows=all(await xml(target),'row').map(row=>{const values=[];for(const c of all(row,'c')){
+      const label=c.getAttribute('r')||'',letters=label.match(/^[A-Z]+/i)?.[0];if(!letters)continue;let index=0;for(const ch of letters.toUpperCase())index=index*26+ch.charCodeAt(0)-64;
+      let v=all(c,'v')[0]?.textContent||'';if(c.getAttribute('t')==='s')v=shared[Number(v)]??'';if(c.getAttribute('t')==='inlineStr')v=all(c,'t').map(t=>t.textContent).join('');
+      while(values.length<index)values.push('');values[index-1]=v;
+    }return values;});
+    return rows;
+  }
+  function exportHeat(){
+    const dates=[...new Set(data.sessions.map(s=>s.date))],ranges=[...new Set(data.sessions.map(s=>s.start+'|'+s.end))].map(k=>k.split('|').map(Number)).sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
+    const width=Math.max(750,190+dates.length*270),height=240+ranges.length*140;let shapes=`<rect width="${width}" height="${height}" fill="#fff"/><text x="45" y="46" font-size="25" font-weight="600">志愿者面试 · 人均面试时间热力图</text><text x="45" y="77" font-size="13" fill="#6f829b">${metric==='budget'?'人均可用时间资源':'实际排定面试时长'} · 单位：分钟 / 人 · 参考 ${config.duration} 分钟 · 平均实际 ${minutes(result.averageDuration)} 分钟</text>`;
+    dates.forEach((d,i)=>shapes+=`<text x="${280+i*270}" y="120" text-anchor="middle" font-size="17">${d}</text>`);
+    ranges.forEach(([start,end],row)=>{shapes+=`<text x="25" y="${202+row*140}" font-size="14">${hm(start)}–${hm(end)}</text>`;dates.forEach((date,col)=>{
+      const s=result.sessions.find(s=>s.date===date&&s.start===start&&s.end===end);if(!s)return;
+      const v=metric==='budget'?s.average:s.scheduledAverage,c=heatColor(s),x=155+col*270,y=142+row*140;
+      shapes+=`<rect x="${x}" y="${y}" width="250" height="120" rx="12" fill="${c.bg}"/><text x="${x+22}" y="${y+55}" font-size="34" fill="${c.fg}">${v==null?'—':v.toFixed(2)}</text><text x="${x+22}" y="${y+88}" font-size="13" fill="${c.fg}">${s.count} 位候选人 · ${s.interviewers.length} 位面试官</text>`;
+    });});
+    shapes+=`<text x="45" y="${height-55}" font-size="12" fill="#6f829b">${metric==='budget'?'人均可用 =（面试官人数 × 每场可用分钟 − 面试间隔总分钟）÷ 已安排人数':'实际排定 = 已排面试总分钟 ÷ 已安排人数'}</text><text x="45" y="${height-29}" font-size="12" fill="#6f829b">已安排 ${result.matched} / ${result.total} 人；每场最低场务 ${config.field} 人，面试间隔 ${config.gap} 分钟，末尾预留 ${config.reserve} 分钟。</text>`;
+    download('面试时间热力图.svg',`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" fill="#142a43">${shapes}</svg>`,'image/svg+xml;charset=utf-8');toast('已保存可缩放的 SVG 热力图');
+  }
+  document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>navigate(b.dataset.page));
+  $('viewAll').onclick=()=>navigate('schedule');$('importShortcut').onclick=()=>navigate('data');
+  document.querySelectorAll('[data-metric]').forEach(b=>b.onclick=()=>{metric=b.dataset.metric;renderHeat();});
+  $('heatmap').onclick=e=>{const b=e.target.closest('[data-slot]');if(b){$('sessionFilter').value=b.dataset.slot;$('statusFilter').value='assigned';$('search').value='';$('modeFilter').value='all';page=1;renderSchedule();navigate('schedule');}};
+  $('settingsForm').onsubmit=e=>{e.preventDefault();const previous=config;try{
+    config={...config,...Object.fromEntries(['duration','gap','reserve','field'].map(k=>[k,Number($(k).value)])),enabled:[...$('sessionToggles').querySelectorAll('input:checked')].map(x=>x.value)};compute();toast('排班已更新');
+  }catch(error){config=previous;hydrateSettings();toast(error.message);}};
+    $('resetSettings').onclick=()=>{config=freshConfig();hydrateSettings();compute();toast('已恢复参考 5 分钟与每场 1 位场务');};
+  for(const id of ['search','sessionFilter','modeFilter','statusFilter'])$(id).addEventListener(id==='search'?'input':'change',()=>{page=1;renderSchedule();});
+  $('prevPage').onclick=()=>{page--;renderSchedule();};$('nextPage').onclick=()=>{page++;renderSchedule();};
+  $('staffTable').onchange=e=>{const key=e.target.dataset.roleKey;if(!key)return;const previous=structuredClone(config);try{config.overrides[key]=e.target.value;compute();toast('角色与面试安排已同步更新');}catch(error){config=previous;renderStaff();toast(error.message);}};
+  $('exportAll').onclick=()=>csv(rosterKind==='candidates'?'候选人名单.csv':'工作人员名单.csv',raw[rosterKind].map((r,i)=>r.map((v,j)=>i&&rosterKind==='candidates'&&j===0?'\t'+v:v)));
+  $('exportExcel').onclick=()=>{
+    const button=$('exportExcel');button.disabled=true;
+    try{download('志愿者面试排班.xlsx',PlannerExcel.bytes(data,result),'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');toast('已导出 Excel：候选人面试安排、面试官排班、场务排班');}
+    catch(error){toast('Excel 导出失败：'+error.message);}
+    finally{button.disabled=false;}
+  };
+  $('exportFiltered').onclick=()=>candidateCSV(filtered(),'上马候选人面试安排_筛选.csv');
+  $('exportStaff').onclick=()=>csv('上马工作人员安排.csv',[['姓名','部门','日期','时段','角色','面试人数','实际面试分钟','场务分钟','线上人数','备注'],...result.sessions.flatMap(s=>data.staff.filter(p=>['interview','field'].includes(s.roles[p.id])).map(p=>{
+    const a=result.assignments.filter(a=>a.session===s.id&&a.interviewer===p.id),f=s.roles[p.id]==='field';return [p.name,p.department,s.date,hm(s.start)+'–'+hm(s.end),f?'场务':'面试官',a.length,a.reduce((n,c)=>n+c.durationSeconds,0)/60,f?s.end-s.start:0,a.filter(c=>c.online).length,s.warnings.join('；')];
+  }))]);
+  $('exportHeat').onclick=exportHeat;
+  $('saveHtml').onclick=()=>{const clone=document.documentElement.cloneNode(true);clone.querySelector('#toast').textContent='';download('面试排班_当前方案.html','<!DOCTYPE html>\n'+clone.outerHTML,'text/html;charset=utf-8');toast('已保存当前问卷与排班设置');};
+  $('importFiles').onclick=async()=>{
+    const a=$('candidateFile').files[0],b=$('staffFile').files[0];if(!a||!b){toast('请先选择两份 Excel');return;}
+    const button=$('importFiles');button.disabled=true;button.textContent='识别中…';
+    try{const [candidates,staff]=await Promise.all([readXlsx(a),readXlsx(b)]);applyRaw({candidates,staff,sources:[a.name,b.name],year:Number($('importYear').value)},true);navigate('data');toast('名单已识别，可在下方编辑');}
+    catch(error){$('dataStatus').textContent='导入失败：'+error.message;toast(error.message);}
+    finally{button.disabled=false;button.textContent='识别名单';}
+  };
+  for(const id of ['candidateFile','staffFile'])$(id).onchange=()=>{const name=$(id).files[0]?.name||'',y=name.match(/(?:^|D)(20d{2})(?:D|$)/);if(id==='candidateFile'&&y)$('importYear').value=y[1];renderSources();};
+  $('restoreData').onclick=()=>askReplace('载入示例名单？当前名单可通过“撤销”恢复。',()=>{applyRaw(structuredClone(demoRaw),true);navigate('data');toast('已载入演示数据');});
+  $('clearData').onclick=()=>askReplace('清空全部候选人和工作人员？操作后可撤销。',()=>{applyRaw(Roster.empty(raw.year),true);toast('已清空，可撤销');});
+  document.querySelectorAll('[data-roster]').forEach(b=>b.onclick=()=>{rosterKind=b.dataset.roster;rosterPage=1;selected.clear();$('rosterSearch').value='';renderRoster();});
+  $('rosterSearch').oninput=()=>{rosterPage=1;renderRoster();};
+  $('rosterPrev').onclick=()=>{rosterPage--;renderRoster();};$('rosterNext').onclick=()=>{rosterPage++;renderRoster();};
+  $('addRecord').onclick=()=>openEditor(null);
+  $('rosterTable').onclick=e=>{const b=e.target.closest('[data-edit],[data-delete]');if(!b)return;if(b.hasAttribute('data-edit'))openEditor(b.dataset.edit);else deleteRecords([b.dataset.delete]);};
+  $('rosterTable').onchange=e=>{
+    if(e.target.id==='rosterSelectAll')rosterVisible().forEach(p=>e.target.checked?selected.add(p.id):selected.delete(p.id));
+    else if(e.target.dataset.selectKey){const k=e.target.dataset.selectKey;e.target.checked?selected.add(k):selected.delete(k);}
+    renderRoster();
+  };
+  $('deleteSelected').onclick=()=>deleteRecords([...selected]);
+  $('undoEdit').onclick=()=>{const last=history.pop();if(!last)return;applyRaw(last.raw,false,false,last.config);toast('已撤销上一步');};
+  $('cancelRecord').onclick=$('closeRecord').onclick=()=>$('recordDialog').close();
+  $('cancelConfirm').onclick=()=>{$('confirmDialog').close();confirmAction=null;};
+  $('acceptConfirm').onclick=()=>{const action=confirmAction;confirmAction=null;$('confirmDialog').close();if(action)try{action();}catch(e){toast(e.message);}};
+  $('editorWindows').onclick=e=>{const b=e.target.closest('[data-add-window],[data-remove-window]');if(!b)return;
+    readWindowDraft();if(b.dataset.addWindow){const s=data.sessions[0];editing.windows[b.dataset.addWindow].push({date:s?.date||localDate(),start:s?hm(s.start):'18:00',end:s?hm(s.end):'20:00'});}
+    else{const [key,index]=b.dataset.removeWindow.split(':');editing.windows[key].splice(Number(index),1);}renderWindowEditor();
+  };
+  $('recordForm').onsubmit=e=>{e.preventDefault();try{
+    readWindowDraft();const windowText=key=>editing.windows[key].map(w=>{if(!w.date||!w.start||!w.end)throw Error('请填写完整的日期和起止时间。');return `${w.date} ${w.start}-${w.end}`;}).join('、');
+    const row=rosterKind==='candidates'?[$('editId').value.trim(),$('editName').value.trim(),windowText('interview'),$('editMode').value]:[$('editName').value.trim(),$('editDepartment').value.trim(),windowText('interview'),windowText('field'),editing.key||'staff-'+crypto.randomUUID()];
+    applyRaw(Roster.change(raw,rosterKind,editing.key,row));$('recordDialog').close();toast('已保存并更新排班');
+  }catch(error){$('recordError').textContent=error.message;}};
+  try{
+    raw=Roster.canonical(raw);
+    if(location.protocol!=='file:')try{
+      const cached=JSON.parse(localStorage.getItem(storageKey)||'null');
+      if(cached){const next=Roster.canonical(cached.raw),nd=Planner.normalize(next.candidates,next.staff,next.sources,next.year),nr=Planner.solve(nd,cached.config);if(Planner.validate(nd,nr).length)throw Error('缓存无效');raw=next;config=nr.config;}
+    }catch{toast('本机记录无法读取，请重新导入或打开备份');}
+    data=Planner.normalize(raw.candidates,raw.staff,raw.sources,raw.year);
+    if(!config)config=freshConfig();$('importYear').value=raw.year;
+    hydrateSettings();compute();navigate(data.candidates.length?'overview':'data');
+  }catch(e){$('loading').textContent='无法生成排班：'+e.message;$('globalNotice').textContent=e.message;}
+})();
+</script>
+</body></html>
