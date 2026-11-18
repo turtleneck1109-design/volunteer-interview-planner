@@ -24,13 +24,29 @@
       return {...a,batchId:batch.id,batchStartSeconds:batch.startSeconds,batchEndSeconds:batch.endSeconds,batchLabel:batch.label,arrivalLabel:config.arrivalMode==='batch'?batch.label:`${s.date} ${clock(a.startSeconds)}–${clock(a.endSeconds)}`,waitingRoom};
     });
     const batches=[...groups.values()].sort((a,b)=>a.date.localeCompare(b.date)||a.startSeconds-b.startSeconds);
-    return {...result,config,assignments,batches};
+    // Keep empty windows visible. Split each lane's required gaps across window
+    // boundaries so the total budget agrees with the original session budget.
+    const availableBatches=result.sessions.flatMap(s=>{
+      const gaps=s.interviewers.flatMap(p=>{
+        const lane=assignments.filter(a=>a.session===s.id&&a.interviewer===p.id).sort((a,b)=>a.startSeconds-b.startSeconds);
+        return lane.slice(0,-1).map(a=>[a.endSeconds,a.endSeconds+config.gap*60]);
+      }),windows=[];
+      for(let start=s.start*60;start<(s.end-config.reserve)*60;start+=config.batchMinutes*60){
+        const window=windowFor(s,start,config),group=groups.get(window.id);
+        const gapSeconds=gaps.reduce((sum,[a,b])=>sum+Math.max(0,Math.min(b,window.endSeconds)-Math.max(a,start)),0);
+        const budgetMinutes=s.enabled&&s.covered?Math.max(0,((window.endSeconds-start)*s.interviewers.length-gapSeconds)/60):0;
+        const count=group?.count||0;
+        windows.push({...window,session:s.id,count,online:group?.online||0,offline:group?.offline||0,enabled:s.enabled,covered:s.covered,interviewers:s.interviewers,fieldStaff:s.fieldStaff,budgetMinutes,average:count?budgetMinutes/count:null});
+      }
+      return windows;
+    }).sort((a,b)=>a.date.localeCompare(b.date)||a.startSeconds-b.startSeconds);
+    return {...result,config,assignments,batches,availableBatches};
   }
   function queryRows(result){
     const r=apply(result);
     const dates=new Map(r.sessions.map(s=>[s.id,s.date]));
     return [...r.assignments].sort((a,b)=>dates.get(a.session).localeCompare(dates.get(b.session))||a.batchStartSeconds-b.batchStartSeconds||a.startSeconds-b.startSeconds||a.id.localeCompare(b.id)).map(a=>[a.arrivalLabel,a.waitingRoom,a.name,a.id]).concat(r.unassigned.map(a=>['待安排','',a.name,a.id]));
   }
-  root.Batches={defaults,apply,windowFor,queryRows};
+  root.Batches={defaults,apply,windowFor,queryRows,clock};
   if(typeof module!=='undefined')module.exports=root.Batches;
 })(typeof globalThis!=='undefined'?globalThis:this);

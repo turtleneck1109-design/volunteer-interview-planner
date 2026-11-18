@@ -29,4 +29,23 @@ assert.equal(B.queryRows(moved).find(r=>r[3]==='DEMO003')[0],person.batchLabel);
 // Pending candidates remain visible in the four-column query rather than disappearing.
 const pending=P.solve(d,{field:1});assert.equal(B.queryRows(pending).length,13);assert.ok(B.queryRows(pending).every(r=>r[0]==='待安排'&&r[1]===''));
 const blank=R.empty(2027),bd=P.normalize(blank.candidates,blank.staff,[],2027);assert.deepEqual(B.queryRows(P.solve(bd)),[]);
+// Available time is computed per arrival window, including unused windows.
+assert.deepEqual(r.availableBatches.map(b=>[b.count,b.average]),[[4,5],[4,5],[4,5],[1,5]]);
+assert.deepEqual(fifteen.availableBatches.map(b=>b.average),[5,5,5,5,5]);
+assert.equal(moved.availableBatches.find(b=>b.id===person.batchId).count,1);
+assert.equal(moved.availableBatches.find(b=>b.id===person.batchId).average,60);
+assert.ok(moved.availableBatches.some(b=>!b.count&&b.average===null&&b.budgetMinutes>0));
+const reserved=B.apply(P.solve(d,{field:0,reserve:5}));assert.equal(reserved.availableBatches.length,3);assert.equal(reserved.availableBatches.at(-1).endSeconds,19*3600);
+assert.equal(reserved.availableBatches.reduce((sum,b)=>sum+b.budgetMinutes,0),reserved.sessions[0].budgetMinutes);
+const disabled=B.apply(P.solve(d,{enabled:[],field:0}));assert.ok(disabled.availableBatches.every(b=>!b.enabled&&b.count===0&&b.average===null&&b.budgetMinutes===0));
+assert.ok(B.apply(pending).availableBatches.every(b=>!b.covered&&b.budgetMinutes===0));
+assert.deepEqual(B.apply(P.solve(bd)).availableBatches,[]);
+// A required gap can straddle a window: subtract only its overlapping minutes.
+const gapRaw=R.empty(2027),gapWin='2027-01-16 18:00-18:50';
+gapRaw.candidates.push(...Array.from({length:3},(_,i)=>['gap'+i,'间隔候选人'+i,gapWin,'否']));gapRaw.staff.push(['间隔面试官','',gapWin,'','G']);
+const gapData=P.normalize(gapRaw.candidates,gapRaw.staff,[],2027),gapped=B.apply(P.solve(gapData,{field:0,gap:17}));
+assert.deepEqual(gapped.availableBatches.map(b=>b.budgetMinutes),[5,5,6]);assert.deepEqual(gapped.availableBatches.map(b=>b.count),[1,1,1]);
+assert.equal(gapped.availableBatches.reduce((sum,b)=>sum+b.budgetMinutes,0),gapped.sessions[0].budgetMinutes);
+assert.equal(JSON.stringify(auto),source);
+console.log('PASS: per-batch availability, unused/disabled windows, partial final windows, reserve, manual moves and gaps across boundaries.');
 console.log('PASS: configurable arrival batches, exact boundaries, room overrides, online/pending notices, manual updates, unchanged interview statistics and query/export rows.');
