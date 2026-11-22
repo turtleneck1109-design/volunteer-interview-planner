@@ -2,6 +2,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),P=require('./sc
 require('./test-adjustments.cjs');
 require('./test-batches.cjs');
 require('./test-fill.cjs');
+require('./test-export.cjs');
 const demo=require('./demo.json');
 const norm=raw=>P.normalize(raw.candidates,raw.staff,raw.sources,raw.year);
 const check=(raw,config={})=>{const d=norm(raw),r=P.solve(d,config);assert.deepEqual(P.validate(d,r),[]);assert.equal(r.matched+r.unassigned.length,d.candidates.length);return r;};
