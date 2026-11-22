@@ -37,7 +37,6 @@
       const startSeconds=value.startSeconds,endSeconds=value.endSeconds,durationSeconds=endSeconds-startSeconds;
       if(!Number.isInteger(startSeconds)||!Number.isInteger(endSeconds)||durationSeconds<1)fail('结束时间必须晚于开始时间，精确到秒。');
       if(startSeconds<s.start*60||endSeconds>(s.end-result.config.reserve)*60)fail('起止时间超出所选时段或占用了末尾预留。');
-      if(durationSeconds>result.config.duration*60)fail(`时长不能超过当前参考值 ${result.config.duration} 分钟，可先修改排班设置。`);
       replacements.set(id,{...c,session:s.id,interviewer:p.id,startSeconds,endSeconds,durationSeconds,start:startSeconds/60,end:endSeconds/60,duration:durationSeconds/60,status:'手动调整',manual:true});
     }
     result.assignments=result.assignments.filter(a=>!replacements.has(a.id)).concat([...replacements.values()]);
@@ -54,28 +53,7 @@
         }
       }
     }
-    const workloads=new Map(data.staff.map(p=>[p.id,{...p,count:0,interviewMinutes:0,fieldMinutes:0,fieldShifts:0,shifts:0}]));
-    for(const s of result.sessions){
-      const people=result.assignments.filter(a=>a.session===s.id),durations=people.map(a=>a.durationSeconds);
-      let gapMinutes=0;
-      s.lanes=s.interviewers.map(p=>{
-        const lane=people.filter(a=>a.interviewer===p.id),w=workloads.get(p.id);
-        w.count+=lane.length;w.interviewMinutes+=lane.reduce((sum,a)=>sum+a.durationSeconds,0)/60;w.shifts++;
-        gapMinutes+=Math.max(0,lane.length-1)*result.config.gap;return {staff:p.id,count:lane.length};
-      });
-      for(const p of s.fieldStaff){const w=workloads.get(p.id);w.fieldMinutes+=s.end-s.start;w.fieldShifts++;w.shifts++;}
-      s.count=people.length;s.online=people.filter(c=>c.online).length;s.offline=s.count-s.online;
-      s.budgetMinutes=s.interviewers.length*s.usable-gapMinutes;s.average=s.count?s.budgetMinutes/s.count:null;
-      s.scheduledAverage=s.count?durations.reduce((sum,n)=>sum+n,0)/s.count/60:null;
-      s.durationSeconds=s.count?Math.round(s.scheduledAverage*60):null;
-      s.utilization=s.standardCapacity?s.count/s.standardCapacity:null;
-      const minimum=durations.length?Math.min(...durations):result.config.duration*60;
-      s.per=Math.max(0,Math.floor((s.usable*60+result.config.gap*60)/(minimum+result.config.gap*60)));
-      s.capacity=s.enabled&&s.covered?s.per*s.interviewers.length:0;
-    }
-    result.assignments.sort((a,b)=>a.session.localeCompare(b.session)||a.startSeconds-b.startSeconds||a.interviewer.localeCompare(b.interviewer));
-    const durations=result.assignments.map(a=>a.durationSeconds);
-    Object.assign(result,{workloads:[...workloads.values()],manualCount:entries.length,matched:result.assignments.length,capacity:result.sessions.reduce((sum,s)=>sum+s.capacity,0),minimumSeconds:durations.length?Math.min(...durations):result.config.duration*60,averageDuration:durations.length?durations.reduce((s,n)=>s+n,0)/durations.length/60:null,minDuration:durations.length?Math.min(...durations)/60:null,maxDuration:durations.length?Math.max(...durations)/60:null,compressedCount:durations.filter(n=>n<result.config.duration*60).length});
+    P.summarize(data,result);
     const errors=P.validate(data,result);if(errors.length)throw Error(errors.join('；'));
     return result;
   }

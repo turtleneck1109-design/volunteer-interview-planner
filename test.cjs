@@ -1,6 +1,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),P=require('./scheduler.js'),R=require('./records.js'),X=require('./excel-export.js');
 require('./test-adjustments.cjs');
 require('./test-batches.cjs');
+require('./test-fill.cjs');
 const demo=require('./demo.json');
 const norm=raw=>P.normalize(raw.candidates,raw.staff,raw.sources,raw.year);
 const check=(raw,config={})=>{const d=norm(raw),r=P.solve(d,config);assert.deepEqual(P.validate(d,r),[]);assert.equal(r.matched+r.unassigned.length,d.candidates.length);return r;};
@@ -27,7 +28,7 @@ assert.equal(reconciled.overrides[d.staff[1].id+'|'+d.sessions[1].id],'off');che
 const overloaded=R.empty(2027),win='2027-01-16 09:00-11:00';overloaded.candidates.push(...Array.from({length:31},(_,i)=>['V'+i,'测试'+i,win,'否']));overloaded.staff.push(['面试员','',win,'','I']);
 const squeezed=check(overloaded,{field:0});assert.equal(squeezed.matched,31);assert.equal(squeezed.minimumSeconds,232);assert.equal(squeezed.compressedCount,31);
 const gap=check(overloaded,{field:0,gap:2,reserve:10});assert.equal(gap.matched,31);assert.equal(gap.minimumSeconds,96);
-const rows=X.makeRows(norm(overloaded),squeezed);assert.equal(rows[0].length,31);assert.equal(rows[1][0][5],31);assert.ok(Math.abs(rows[1][0][10]-31*232/60)<1e-8);assert.equal(X.bytes(norm(blank),check(blank)).slice(0,2).toString(),'80,75');
+const rows=X.makeRows(norm(overloaded),squeezed);assert.equal(rows[0].length,31);assert.equal(rows[1][0][5],31);assert.equal(rows[1][0][10],120);assert.equal(X.bytes(norm(blank),check(blank)).slice(0,2).toString(),'80,75');
 // Compare max coverage against independently enumerated tiny bipartite assignments.
 let seed=125;const rand=()=>((seed=(seed*1664525+1013904223)>>>0)/2**32);
 for(let t=0;t<30;t++){

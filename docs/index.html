@@ -41,19 +41,19 @@ dialog{border:1px solid var(--line);border-radius:16px;padding:0;width:min(650px
  <div id="loading">正在生成排班…</div><div class="pageintro"><span id="periodLabel"></span></div>
  <details class="settings" id="settings"><summary><strong>排班设置 ⌄</strong><span id="settingsSummary"></span></summary>
   <form class="settings-body" id="settingsForm">
-   <div class="settings-grid"><label>参考时长 / 分钟<input id="duration" type="number" min="1" max="120" step="1" value="5" required></label><label>面试间隔 / 分钟<input id="gap" type="number" min="0" max="30" step="1" value="0" required></label><label>末尾预留 / 分钟<input id="reserve" type="number" min="0" max="119" step="1" value="0" required></label><label>每场场务 / 人<input id="field" type="number" min="0" max="15" step="1" value="1" required></label></div>
+   <div class="settings-grid"><label>对照时长 / 分钟<input id="duration" type="number" min="1" max="120" step="1" value="5" required></label><label>面试间隔 / 分钟<input id="gap" type="number" min="0" max="30" step="1" value="0" required></label><label>末尾预留 / 分钟<input id="reserve" type="number" min="0" max="119" step="1" value="0" required></label><label>每场场务 / 人<input id="field" type="number" min="0" max="15" step="1" value="1" required></label></div>
    <div class="arrival-settings"><label>到场通知<select id="arrivalMode"><option value="batch">按批次候场</option><option value="exact">按具体时间</option></select></label><label>批次间隔 / 分钟<input id="batchMinutes" type="number" min="1" max="240" step="1" value="20" required></label><label>默认候场教室<input id="waitingRoom" maxlength="120" placeholder="如：教学楼 101"></label></div>
    <details class="room-details"><summary>按日期设置教室</summary><div class="date-room-fields" id="dateRoomFields"></div></details>
    <div class="session-toggle" id="sessionToggles"></div>
-   <div class="settings-footer"><span>优先安排全部候选人，必要时缩短面试。</span><div class="flex"><button type="button" id="resetSettings">恢复默认</button><button type="submit" class="primary">应用设置</button></div></div>
+   <div class="settings-footer"><span>时长无上限；优先覆盖全部候选人，再尽量排满。</span><div class="flex"><button type="button" id="resetSettings">恢复默认</button><button type="submit" class="primary">应用设置</button></div></div>
   </form>
  </details>
  <div id="globalNotice" aria-live="polite"></div>
  <section class="section active" id="overview">
   <div class="metrics" id="metrics"></div>
   <div class="grid-main">
-   <article class="card"><div class="card-head"><div><h2>人均可用时间</h2><p id="heatCaption">20 分钟 / 场 · 点击查看安排</p></div></div><div class="heat-scroll"><div class="heatmap" id="heatmap"></div></div><div class="heat-legend"><span>较少</span><i class="gradient"></i><span>充足</span><button class="text" id="exportHeat">下载图表 ↗</button></div><p class="formula" id="heatFormula"></p></article>
-   <article class="card"><div class="card-head"><div><h2>时段安排</h2><p>已安排 / 参考容量</p></div><span class="tag" id="slotBadge"></span></div><div class="capacity-list" id="capacityList"></div><p class="cap-note" id="capacityNote"></p></article>
+   <article class="card"><div class="card-head"><div><h2>人均可用时间</h2><p id="heatCaption">20 分钟 / 场 · 点击查看到场名单</p></div></div><div class="heat-scroll"><div class="heatmap" id="heatmap"></div></div><div class="heat-legend"><span>较少</span><i class="gradient"></i><span>充足</span><button class="text" id="exportHeat">下载图表 ↗</button></div><p class="formula" id="heatFormula"></p></article>
+   <article class="card"><div class="card-head"><div><h2>时段安排</h2><p>面试时间 / 可用时间</p></div><span class="tag" id="slotBadge"></span></div><div class="capacity-list" id="capacityList"></div><p class="cap-note" id="capacityNote"></p></article>
   </div>
   <article class="card bottom-card"><div class="card-head"><h2>近期面试</h2><button class="small" id="viewAll">查看全部 →</button></div><div class="table-wrap" id="previewTable"></div></article>
  </section>
@@ -87,9 +87,9 @@ dialog{border:1px solid var(--line);border-radius:16px;padding:0;width:min(650px
   </article>
   <details class="help-details"><summary>使用说明与排班规则</summary><div class="method-list">
    <div><h3>导入格式</h3><p>读取 .xlsx 首张表。候选人需有学号、姓名、面试时间和线上选项（是/否）；工作人员需有姓名、面试官时间和场务时间。多个时段用顿号或逗号分隔。</p></div>
-   <div><h3>覆盖优先</h3><p>5 分钟是参考。先最大化可安排人数，再尽量接近参考时长，精确到秒。同一场时长相同，一人一位面试官；时间不重叠，场务不兼任。</p></div>
+   <div><h3>覆盖优先</h3><p>5 分钟仅用于对照，不限制时长。先覆盖尽量多的人，再最大化总面试时间，并尽量均衡个人时长。一人一位面试官，扣除间隔和预留后尽量排满。</p></div>
    <div><h3>时间口径</h3><p>实际时长 = 总面试分钟 ÷ 已安排人数。可用时间 =（面试官人数 × 可用分钟 − 间隔）÷ 已安排人数。无人时显示“—”。原时间有重叠时会拆成不重叠场次。</p></div>
-   <div><h3>保存与导出</h3><p>名单只在本机浏览器处理和保存，不会上传服务器。查询表用于通知到场时间与教室；完整 Excel 分为候选人、面试官、场务三张表。在面试安排中可逐人调整时间和面试官，冲突时不保存。手动调整会同步统计与导出；修改名单或参数会保留有效的手动安排，不兼容时需先调整或恢复自动。导入新问卷会重新排班。保存当前网页可备份名单、设置及手动调整；导入和修改均可撤销，刷新后撤销记录清空。</p></div>
+   <div><h3>保存与导出</h3><p>名单只在本机浏览器处理和保存，不会上传服务器。查询表用于通知到场时间与教室；完整 Excel 分为候选人、面试官、场务三张表。在面试安排中可逐人调整时间和面试官，冲突时不保存。手动固定的时间会保留，其余自动安排会重新分配；统计与导出同步更新。修改名单或参数若与固定安排不兼容，需先调整或恢复自动。导入新问卷会重新排班。保存当前网页可备份名单、设置及手动调整；导入和修改均可撤销，刷新后撤销记录清空。</p></div>
   </div></details>
  </section>
  <footer class="footnote"><span id="footerBrand">志愿者面试工作台</span><span id="footerStatus"></span></footer>
@@ -112,7 +112,7 @@ dialog{border:1px solid var(--line);border-radius:16px;padding:0;width:min(650px
    <div class="assignment-availability"><div class="window-head"><h3>空闲时间</h3><button class="text small" type="button" id="suggestAssignment">使用首个空档</button></div><p id="assignmentFree" class="roster-note"></p></div>
    <p class="roster-note" id="assignmentArrival"></p><p class="roster-note">保存后同步统计与导出。时间可精确到秒。</p><p id="assignmentError" class="form-error" role="alert"></p>
   </div>
-  <div class="dialog-foot assignment-foot"><button type="button" class="text" id="resetOneAssignment" hidden>恢复自动</button><button type="button" id="cancelAssignment">取消</button><button class="primary" type="submit" id="saveAssignment">保存调整</button></div>
+  <p class="roster-note" style="padding:0 24px 12px">保存后固定此人的时间，其余自动安排会重新分配。</p><div class="dialog-foot assignment-foot"><button type="button" class="text" id="resetOneAssignment" hidden>恢复自动</button><button type="button" id="cancelAssignment">取消</button><button class="primary" type="submit" id="saveAssignment">保存调整</button></div>
  </form>
 </dialog>
 <dialog id="confirmDialog" aria-labelledby="confirmTitle"><div class="dialog-head"><h2 id="confirmTitle">确认操作</h2></div><div class="dialog-body"><p id="confirmText"></p></div><div class="dialog-foot"><button id="cancelConfirm">取消</button><button id="acceptConfirm" class="primary">确认</button></div></dialog>
@@ -476,85 +476,125 @@ dialog{border:1px solid var(--line);border-radius:16px;padding:0;width:min(650px
       return {...s,enabled,roles,interviewers,fieldStaff,usable,covered,per,capacity:covered?per*interviewers.length:0,warnings};
     });
   }
-  // Successive shortest augmenting paths: maximum coverage first, then scarce
-  // availability and convex session occupancy costs. No fabricated availability.
-  function match(candidates,sessions) {
-    const N=candidates.length,source=N+sessions.length,sink=source+1,V=sink+1,g=Array.from({length:V},()=>[]);
-    function edge(a,b,cap,cost){const x={to:b,rev:g[b].length,cap,cost,initial:cap};g[a].push(x);g[b].push({to:a,rev:g[a].length-1,cap:0,cost:-cost,initial:0});return x;}
+  // Maximum coverage, then maximum interview seconds. A second cost breaks
+  // ties by scarce availability and balanced occupancy; it cannot reduce time.
+  function match(candidates,units,gapSeconds) {
+    const N=candidates.length,source=N+units.length,sink=source+1,V=sink+1,g=Array.from({length:V},()=>[]);
+    function edge(a,b,cap,time,tie){const x={to:b,rev:g[b].length,cap,time,tie};g[a].push(x);g[b].push({to:a,rev:g[a].length-1,cap:0,time:-time,tie:-tie});return x;}
     const refs=[];
     candidates.forEach((c,i)=>{
-      const available=sessions.filter(s=>s.capacity&&c.slots.includes(s.id));
-      edge(source,i,1,available.length*10000);
-      refs[i]=available.map(s=>({s:sessions.indexOf(s),e:edge(i,N+sessions.indexOf(s),1,0)}));
+      const available=units.map((u,j)=>({u,j})).filter(({u})=>u.capacity&&c.slots.includes(u.session));
+      edge(source,i,1,0,new Set(available.map(({u})=>u.session)).size*10000);
+      refs[i]=available.map(({u,j})=>({unit:j,e:edge(i,N+j,1,0,0)}));
     });
-    sessions.forEach((s,j)=>{for(let k=1;k<=Math.min(s.capacity,N);k++)edge(N+j,sink,1,Math.round(1000*(2*k-1)/s.capacity));});
+    units.forEach((u,j)=>{for(let k=1;k<=Math.min(u.capacity,N);k++)edge(N+j,sink,1,k<=u.staff.length?-(u.end-u.start):gapSeconds,Math.round(1000*(2*k-1)/u.capacity));});
     let flow=0;
     while(true){
-      const d=Array(V).fill(Infinity),prev=Array(V),inq=Array(V).fill(false),q=[source];d[source]=0;inq[source]=true;
+      const d=Array(V).fill(Infinity),tie=Array(V).fill(Infinity),prev=Array(V),inq=Array(V).fill(false),q=[source];d[source]=0;tie[source]=0;inq[source]=true;
       for(let h=0;h<q.length;h++){
         const u=q[h];inq[u]=false;
-        g[u].forEach((e,k)=>{if(e.cap>0&&d[e.to]>d[u]+e.cost){d[e.to]=d[u]+e.cost;prev[e.to]=[u,k];if(!inq[e.to]){q.push(e.to);inq[e.to]=true;}}});
+        g[u].forEach((e,k)=>{const next=d[u]+e.time,t=tie[u]+e.tie;if(e.cap>0&&(next<d[e.to]||(next===d[e.to]&&t<tie[e.to]))){d[e.to]=next;tie[e.to]=t;prev[e.to]=[u,k];if(!inq[e.to]){q.push(e.to);inq[e.to]=true;}}});
       }
       if(!prev[sink])break;
       for(let v=sink;v!==source;){const [u,k]=prev[v],e=g[u][k];e.cap--;g[v][e.rev].cap++;v=u;}flow++;
     }
-    return {flow,assignment:refs.map(list=>list.find(x=>x.e.cap===0)?.s??-1)};
+    const assignment=refs.map(list=>list.find(x=>x.e.cap===0)?.unit??-1),counts=Array(units.length).fill(0);
+    assignment.forEach(j=>{if(j>=0)counts[j]++;});
+    const interviewSeconds=units.reduce((sum,u,j)=>sum+Math.min(counts[j],u.staff.length)*(u.end-u.start)-Math.max(0,counts[j]-u.staff.length)*gapSeconds,0);
+    return {flow,assignment,interviewSeconds};
+  }
+  function fixedAssignments(data,sessions,config){
+    const fixed=[];
+    for(const [id,v] of Object.entries(config.adjustments||{})){
+      const c=data.candidates.find(c=>c.id===id),s=sessions.find(s=>s.id===v?.session),p=data.staff.find(p=>p.id===v?.interviewer);
+      const fail=message=>{throw Error(`手动安排「${c?.name||id}」：${message}`);};
+      if(!c)fail('候选人已不存在。');
+      if(!s||!c.slots.includes(s.id))fail('时段不在候选人的可用时间内。');
+      if(!s.enabled)fail('该时段已停用。');
+      if(!p||!p.interview.includes(s.id)||s.roles[p.id]!=='interview')fail('所选人员在该时段未担任面试官。');
+      if(!s.covered)fail('该时段场务不足。');
+      const startSeconds=v.startSeconds,endSeconds=v.endSeconds,durationSeconds=endSeconds-startSeconds;
+      if(!Number.isInteger(startSeconds)||!Number.isInteger(endSeconds)||durationSeconds<1)fail('结束时间必须晚于开始时间，精确到秒。');
+      if(startSeconds<s.start*60||endSeconds>(s.end-config.reserve)*60)fail('起止时间超出所选时段或占用了末尾预留。');
+      fixed.push({...c,session:s.id,interviewer:p.id,startSeconds,endSeconds,durationSeconds,start:startSeconds/60,end:endSeconds/60,duration:durationSeconds/60,status:'手动调整',manual:true});
+    }
+    const groups=new Map();
+    for(const a of fixed){const key=a.session+'|'+a.interviewer;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(a);}
+    for(const lane of groups.values()){
+      lane.sort((a,b)=>a.startSeconds-b.startSeconds);
+      for(let i=1;i<lane.length;i++)if(lane[i].startSeconds<lane[i-1].endSeconds+config.gap*60)throw Error(`手动安排时间冲突：「${lane[i-1].name}」与「${lane[i].name}」，请保留面试间隔。`);
+    }
+    return fixed;
+  }
+  function summarize(data,result){
+    const {config,sessions,assignments}=result,workloads=new Map(data.staff.map(p=>[p.id,{...p,count:0,interviewMinutes:0,fieldMinutes:0,fieldShifts:0,shifts:0}]));
+    for(const s of sessions){
+      const people=assignments.filter(a=>a.session===s.id),durations=people.map(a=>a.durationSeconds);let gapMinutes=0;
+      s.lanes=s.interviewers.map(p=>{
+        const lane=people.filter(a=>a.interviewer===p.id),w=workloads.get(p.id);
+        w.count+=lane.length;w.interviewMinutes+=lane.reduce((sum,a)=>sum+a.durationSeconds,0)/60;w.shifts++;
+        gapMinutes+=Math.max(0,lane.length-1)*config.gap;return {staff:p.id,count:lane.length};
+      });
+      for(const p of s.fieldStaff){const w=workloads.get(p.id);w.fieldMinutes+=s.end-s.start;w.fieldShifts++;w.shifts++;}
+      s.count=people.length;s.online=people.filter(c=>c.online).length;s.offline=s.count-s.online;
+      s.budgetMinutes=s.interviewers.length*s.usable-gapMinutes;s.average=s.count?s.budgetMinutes/s.count:null;
+      s.interviewMinutes=durations.reduce((sum,n)=>sum+n,0)/60;
+      s.scheduledAverage=s.count?s.interviewMinutes/s.count:null;s.durationSeconds=s.count?Math.round(s.scheduledAverage*60):null;
+      s.availableMinutes=s.enabled&&s.covered?s.interviewers.length*s.usable:0;
+      s.timeUtilization=s.availableMinutes?s.interviewMinutes/s.availableMinutes:0;
+      s.utilization=s.standardCapacity?s.count/s.standardCapacity:null;
+      const minimum=durations.length?Math.min(...durations):1;
+      s.per=Math.max(0,Math.floor((s.usable*60+config.gap*60)/(minimum+config.gap*60)));
+      s.capacity=s.enabled&&s.covered?s.per*s.interviewers.length:0;
+    }
+    assignments.sort((a,b)=>a.session.localeCompare(b.session)||a.startSeconds-b.startSeconds||a.interviewer.localeCompare(b.interviewer));
+    const durations=assignments.map(a=>a.durationSeconds),totalMinutes=durations.reduce((sum,n)=>sum+n,0)/60,availableMinutes=sessions.reduce((sum,s)=>sum+s.availableMinutes,0);
+    return Object.assign(result,{workloads:[...workloads.values()],manualCount:assignments.filter(a=>a.manual).length,matched:assignments.length,total:data.candidates.length,capacity:sessions.reduce((sum,s)=>sum+s.capacity,0),standardCapacity:sessions.reduce((sum,s)=>sum+s.standardCapacity,0),minimumSeconds:durations.length?Math.min(...durations):null,averageDuration:durations.length?totalMinutes/durations.length:null,minDuration:durations.length?Math.min(...durations)/60:null,maxDuration:durations.length?Math.max(...durations)/60:null,compressedCount:durations.filter(n=>n<config.duration*60).length,extendedCount:durations.filter(n=>n>config.duration*60).length,interviewMinutes:totalMinutes,availableMinutes,timeUtilization:availableMinutes?totalMinutes/availableMinutes:0});
   }
   function solve(data,input={}) {
     const config={...defaults,...input,overrides:{...(input.overrides||{})},enabled:[...(input.enabled??(data.sessions||SESSIONS).map(s=>s.id))]};
     for(const [k,lo,hi] of [['duration',1,120],['gap',0,30],['reserve',0,119],['field',0,15]])if(!Number.isInteger(config[k])||config[k]<lo||config[k]>hi)throw Error('排班参数超出范围。');
-    const sessions=staffPlan(data,config),referenceSeconds=config.duration*60,gapSeconds=config.gap*60;
+    const sessions=staffPlan(data,config),gapSeconds=config.gap*60;
     sessions.forEach(s=>{s.standardCapacity=s.capacity;s.standardPer=s.per;});
-    const setCapacity=seconds=>sessions.forEach(s=>{
-      s.per=Math.max(0,Math.floor((s.usable*60+gapSeconds)/(seconds+gapSeconds)));
-      s.capacity=s.enabled&&s.covered?s.per*s.interviewers.length:0;
-    });
-    // First maximize coverage at one-second precision, then find the largest
-    // common duration that preserves that coverage. The reference is soft.
-    let matched=match(data.candidates,sessions),minimumSeconds=referenceSeconds;
-    if(matched.flow<data.candidates.length){
-      setCapacity(1);const maximum=match(data.candidates,sessions);
-      if(maximum.flow>matched.flow){
-        let lo=1,hi=referenceSeconds;
-        while(lo<hi){const mid=Math.ceil((lo+hi)/2);setCapacity(mid);if(match(data.candidates,sessions).flow===maximum.flow)lo=mid;else hi=mid-1;}
-        minimumSeconds=lo;
+    const fixed=fixedAssignments(data,sessions,config),fixedIds=new Set(fixed.map(a=>a.id)),candidates=data.candidates.filter(c=>!fixedIds.has(c.id)),units=[];
+    // Fixed interviews remain exact. Pack automatic interviews into the remaining
+    // uninterrupted windows, reserving gaps on both sides of every fixed booking.
+    for(const s of sessions){
+      if(!s.enabled||!s.covered)continue;
+      const windows=new Map(),limit=(s.end-config.reserve)*60;
+      const add=(start,end,p)=>{if(end<=start)return;const key=start+'|'+end;if(!windows.has(key))windows.set(key,{session:s.id,start,end,staff:[]});windows.get(key).staff.push(p);};
+      for(const p of s.interviewers){
+        let start=s.start*60;
+        const anchors=fixed.filter(a=>a.session===s.id&&a.interviewer===p.id).sort((a,b)=>a.startSeconds-b.startSeconds);
+        for(const a of anchors){add(start,a.startSeconds-gapSeconds,p);start=a.endSeconds+gapSeconds;}
+        add(start,limit,p);
       }
-      setCapacity(minimumSeconds);matched=match(data.candidates,sessions);
+      units.push(...windows.values());
     }
-    const workloads=Object.fromEntries(data.staff.map(p=>[p.id,{...p,count:0,interviewMinutes:0,fieldMinutes:0,fieldShifts:0,shifts:0}]));
-    const assignments=[];
-    for(let j=0;j<sessions.length;j++){
-      const s=sessions[j],people=data.candidates.filter((c,i)=>matched.assignment[i]===j);
-      const lanes=s.interviewers.map(p=>({p,people:[]}));
-      // Balance each block first (difference at most one), then total workload.
+    const setCapacity=seconds=>units.forEach(u=>u.capacity=Math.max(0,Math.floor((u.end-u.start+gapSeconds)/(seconds+gapSeconds)))*u.staff.length);
+    setCapacity(1);const maximum=match(candidates,units,gapSeconds);
+    // Among maximum-time, maximum-coverage solutions, maximize the shortest
+    // automatic interview. The reference never bounds this search.
+    let lo=1,hi=maximum.flow?Math.max(1,...units.map(u=>u.end-u.start)):1;
+    while(lo<hi){const mid=Math.ceil((lo+hi)/2);setCapacity(mid);const trial=match(candidates,units,gapSeconds);if(trial.flow===maximum.flow&&trial.interviewSeconds===maximum.interviewSeconds)lo=mid;else hi=mid-1;}
+    setCapacity(lo);const matched=match(candidates,units,gapSeconds),assignments=[...fixed],loads=new Map(data.staff.map(p=>[p.id,fixed.filter(a=>a.interviewer===p.id).length]));
+    for(let j=0;j<units.length;j++){
+      const u=units[j],people=candidates.filter((c,i)=>matched.assignment[i]===j),lanes=u.staff.map(p=>({p,people:[]}));
       for(const c of people.sort((a,b)=>a.slots.length-b.slots.length||a.id.localeCompare(b.id))){
-        lanes.sort((a,b)=>a.people.length-b.people.length||workloads[a.p.id].count-workloads[b.p.id].count||a.p.id.localeCompare(b.p.id));
-        const lane=lanes[0];lane.people.push(c);workloads[lane.p.id].count++;
+        lanes.sort((a,b)=>a.people.length-b.people.length||loads.get(a.p.id)-loads.get(b.p.id)||a.p.id.localeCompare(b.p.id));
+        const lane=lanes[0];lane.people.push(c);loads.set(lane.p.id,loads.get(lane.p.id)+1);
       }
-      const maxLaneCount=Math.max(0,...lanes.map(l=>l.people.length));
-      // Recover spare time in quieter sessions without reducing coverage.
-      s.durationSeconds=maxLaneCount?Math.min(referenceSeconds,Math.floor((s.usable*60-(maxLaneCount-1)*gapSeconds)/maxLaneCount)):null;
-      let gapMinutes=0;
       for(const lane of lanes){
-        lane.people.sort((a,b)=>Number(b.online)-Number(a.online)||a.id.localeCompare(b.id));
-        gapMinutes+=Math.max(0,lane.people.length-1)*config.gap;
-        lane.people.forEach((c,index)=>{
-          const startSeconds=s.start*60+index*(s.durationSeconds+gapSeconds),endSeconds=startSeconds+s.durationSeconds;
-          assignments.push({...c,session:s.id,interviewer:lane.p.id,startSeconds,endSeconds,durationSeconds:s.durationSeconds,start:startSeconds/60,end:endSeconds/60,duration:s.durationSeconds/60,status:'已安排'});
+        const n=lane.people.length;if(!n)continue;
+        const available=u.end-u.start-(n-1)*gapSeconds,base=Math.floor(available/n),remainder=available%n;let startSeconds=u.start;
+        lane.people.sort((a,b)=>Number(b.online)-Number(a.online)||a.id.localeCompare(b.id)).forEach((c,i)=>{
+          const durationSeconds=base+(i<remainder?1:0),endSeconds=startSeconds+durationSeconds;
+          assignments.push({...c,session:u.session,interviewer:lane.p.id,startSeconds,endSeconds,durationSeconds,start:startSeconds/60,end:endSeconds/60,duration:durationSeconds/60,status:'已安排'});startSeconds=endSeconds+gapSeconds;
         });
-        workloads[lane.p.id].interviewMinutes+=lane.people.length*(s.durationSeconds||0)/60;
-        workloads[lane.p.id].shifts++;
       }
-      s.fieldStaff.forEach(p=>{workloads[p.id].fieldMinutes+=s.end-s.start;workloads[p.id].fieldShifts++;workloads[p.id].shifts++;});
-      s.count=people.length;s.online=people.filter(c=>c.online).length;s.offline=people.length-s.online;
-      s.budgetMinutes=s.interviewers.length*s.usable-gapMinutes;
-      s.average=s.count?s.budgetMinutes/s.count:null;s.scheduledAverage=s.count?s.durationSeconds/60:null;s.utilization=s.standardCapacity?s.count/s.standardCapacity:null;
-      s.lanes=lanes.map(l=>({staff:l.p.id,count:l.people.length}));
     }
-    const unassigned=data.candidates.filter((c,i)=>matched.assignment[i]===-1).map(c=>({...c,status:'待安排',reason:!c.slots.length?'未填写可用时段':!c.slots.some(id=>config.enabled.includes(id))?'所选时段均未启用':!c.slots.some(id=>{const s=sessions.find(s=>s.id===id);return s?.enabled&&s.covered&&s.interviewers.length;})?'可用时段缺少面试官或场务':'扣除间隔和预留后，可用时间不足（已按秒压缩）'}));
-    assignments.sort((a,b)=>a.session.localeCompare(b.session)||a.start-b.start||a.interviewer.localeCompare(b.interviewer));
-    const durations=assignments.map(a=>a.durationSeconds);
-    return {config,sessions,assignments,unassigned,workloads:Object.values(workloads),matched:matched.flow,total:data.candidates.length,capacity:sessions.reduce((n,s)=>n+s.capacity,0),standardCapacity:sessions.reduce((n,s)=>n+s.standardCapacity,0),minimumSeconds,averageDuration:durations.length?durations.reduce((n,v)=>n+v,0)/durations.length/60:null,minDuration:durations.length?Math.min(...durations)/60:null,maxDuration:durations.length?Math.max(...durations)/60:null,compressedCount:durations.filter(v=>v<referenceSeconds).length};
+    const unassigned=candidates.filter((c,i)=>matched.assignment[i]===-1).map(c=>({...c,status:'待安排',reason:!c.slots.length?'未填写可用时段':!c.slots.some(id=>config.enabled.includes(id))?'所选时段均未启用':!c.slots.some(id=>{const s=sessions.find(s=>s.id===id);return s?.enabled&&s.covered&&s.interviewers.length;})?'可用时段缺少面试官或场务':'扣除间隔、预留和固定安排后，可用时间不足（已按秒分配）'}));
+    return summarize(data,{config,sessions,assignments,unassigned});
   }
   function validate(data,result){
     const errors=[],seen=new Set(),groups={};
@@ -564,7 +604,7 @@ dialog{border:1px solid var(--line);border-radius:16px;padding:0;width:min(650px
       if(!c||!s||!p||!c.slots.includes(a.session)||!p.interview.includes(a.session))errors.push('超出可用时段');
       if(!s||!p)continue;
       if(!s.enabled||s.roles[p.id]!=='interview'||s.fieldStaff.length<result.config.field)errors.push('人员角色冲突或场务不足');
-      if(!Number.isInteger(a.durationSeconds)||a.durationSeconds<1||a.durationSeconds>result.config.duration*60||a.startSeconds<s.start*60||a.endSeconds>(s.end-result.config.reserve)*60||a.endSeconds-a.startSeconds!==a.durationSeconds||a.start!==a.startSeconds/60||a.end!==a.endSeconds/60||a.duration!==a.durationSeconds/60)errors.push('面试时间越界');
+      if(!Number.isInteger(a.durationSeconds)||a.durationSeconds<1||a.startSeconds<s.start*60||a.endSeconds>(s.end-result.config.reserve)*60||a.endSeconds-a.startSeconds!==a.durationSeconds||a.start!==a.startSeconds/60||a.end!==a.endSeconds/60||a.duration!==a.durationSeconds/60)errors.push('面试时间越界');
       (groups[a.session+'|'+a.interviewer]??=[]).push(a);
     }
     for(const g of Object.values(groups)){g.sort((a,b)=>a.startSeconds-b.startSeconds);for(let i=1;i<g.length;i++)if(g[i].startSeconds<g[i-1].endSeconds+result.config.gap*60)errors.push('面试官时间冲突');}
@@ -573,7 +613,7 @@ dialog{border:1px solid var(--line);border-radius:16px;padding:0;width:min(650px
     for(const s of result.sessions){if(s.count>s.capacity)errors.push('时段超容量');for(const p of s.fieldStaff)if(!p.field.includes(s.id))errors.push('场务超出可用时段');}
     return [...new Set(errors)];
   }
-  root.Planner={SESSIONS,defaults,normalize,solve,validate};
+  root.Planner={SESSIONS,defaults,normalize,solve,validate,summarize};
   if(typeof module!=='undefined')module.exports=root.Planner;
 })(typeof globalThis!=='undefined'?globalThis:this);
 </script><script>/* Validated, immutable roster operations. No network or storage side effects. */
@@ -660,7 +700,6 @@ dialog{border:1px solid var(--line);border-radius:16px;padding:0;width:min(650px
       const startSeconds=value.startSeconds,endSeconds=value.endSeconds,durationSeconds=endSeconds-startSeconds;
       if(!Number.isInteger(startSeconds)||!Number.isInteger(endSeconds)||durationSeconds<1)fail('结束时间必须晚于开始时间，精确到秒。');
       if(startSeconds<s.start*60||endSeconds>(s.end-result.config.reserve)*60)fail('起止时间超出所选时段或占用了末尾预留。');
-      if(durationSeconds>result.config.duration*60)fail(`时长不能超过当前参考值 ${result.config.duration} 分钟，可先修改排班设置。`);
       replacements.set(id,{...c,session:s.id,interviewer:p.id,startSeconds,endSeconds,durationSeconds,start:startSeconds/60,end:endSeconds/60,duration:durationSeconds/60,status:'手动调整',manual:true});
     }
     result.assignments=result.assignments.filter(a=>!replacements.has(a.id)).concat([...replacements.values()]);
@@ -677,28 +716,7 @@ dialog{border:1px solid var(--line);border-radius:16px;padding:0;width:min(650px
         }
       }
     }
-    const workloads=new Map(data.staff.map(p=>[p.id,{...p,count:0,interviewMinutes:0,fieldMinutes:0,fieldShifts:0,shifts:0}]));
-    for(const s of result.sessions){
-      const people=result.assignments.filter(a=>a.session===s.id),durations=people.map(a=>a.durationSeconds);
-      let gapMinutes=0;
-      s.lanes=s.interviewers.map(p=>{
-        const lane=people.filter(a=>a.interviewer===p.id),w=workloads.get(p.id);
-        w.count+=lane.length;w.interviewMinutes+=lane.reduce((sum,a)=>sum+a.durationSeconds,0)/60;w.shifts++;
-        gapMinutes+=Math.max(0,lane.length-1)*result.config.gap;return {staff:p.id,count:lane.length};
-      });
-      for(const p of s.fieldStaff){const w=workloads.get(p.id);w.fieldMinutes+=s.end-s.start;w.fieldShifts++;w.shifts++;}
-      s.count=people.length;s.online=people.filter(c=>c.online).length;s.offline=s.count-s.online;
-      s.budgetMinutes=s.interviewers.length*s.usable-gapMinutes;s.average=s.count?s.budgetMinutes/s.count:null;
-      s.scheduledAverage=s.count?durations.reduce((sum,n)=>sum+n,0)/s.count/60:null;
-      s.durationSeconds=s.count?Math.round(s.scheduledAverage*60):null;
-      s.utilization=s.standardCapacity?s.count/s.standardCapacity:null;
-      const minimum=durations.length?Math.min(...durations):result.config.duration*60;
-      s.per=Math.max(0,Math.floor((s.usable*60+result.config.gap*60)/(minimum+result.config.gap*60)));
-      s.capacity=s.enabled&&s.covered?s.per*s.interviewers.length:0;
-    }
-    result.assignments.sort((a,b)=>a.session.localeCompare(b.session)||a.startSeconds-b.startSeconds||a.interviewer.localeCompare(b.interviewer));
-    const durations=result.assignments.map(a=>a.durationSeconds);
-    Object.assign(result,{workloads:[...workloads.values()],manualCount:entries.length,matched:result.assignments.length,capacity:result.sessions.reduce((sum,s)=>sum+s.capacity,0),minimumSeconds:durations.length?Math.min(...durations):result.config.duration*60,averageDuration:durations.length?durations.reduce((s,n)=>s+n,0)/durations.length/60:null,minDuration:durations.length?Math.min(...durations)/60:null,maxDuration:durations.length?Math.max(...durations)/60:null,compressedCount:durations.filter(n=>n<result.config.duration*60).length});
+    P.summarize(data,result);
     const errors=P.validate(data,result);if(errors.length)throw Error(errors.join('；'));
     return result;
   }
@@ -743,7 +761,8 @@ dialog{border:1px solid var(--line);border-radius:16px;padding:0;width:min(650px
         const gapSeconds=gaps.reduce((sum,[a,b])=>sum+Math.max(0,Math.min(b,window.endSeconds)-Math.max(a,start)),0);
         const budgetMinutes=s.enabled&&s.covered?Math.max(0,((window.endSeconds-start)*s.interviewers.length-gapSeconds)/60):0;
         const count=group?.count||0;
-        windows.push({...window,session:s.id,count,online:group?.online||0,offline:group?.offline||0,enabled:s.enabled,covered:s.covered,interviewers:s.interviewers,fieldStaff:s.fieldStaff,budgetMinutes,average:count?budgetMinutes/count:null});
+        const ongoingCount=assignments.filter(a=>a.session===s.id&&a.startSeconds<window.endSeconds&&a.endSeconds>start).length;
+        windows.push({...window,session:s.id,count,ongoingCount,online:group?.online||0,offline:group?.offline||0,enabled:s.enabled,covered:s.covered,interviewers:s.interviewers,fieldStaff:s.fieldStaff,budgetMinutes,average:count?budgetMinutes/count:null});
       }
       return windows;
     }).sort((a,b)=>a.date.localeCompare(b.date)||a.startSeconds-b.startSeconds);
@@ -913,7 +932,7 @@ globalThis.PlannerImportTemplates={"candidates":{"name":"候选人导入模板.x
   }
   function renderHeat(){
     const {dates,ranges,cells}=heatLayout();
-    $('heatCaption').textContent=`${config.batchMinutes} 分钟 / 场 · 点击查看安排`;
+    $('heatCaption').textContent=`${config.batchMinutes} 分钟 / 场 · 点击查看到场名单`;
     $('heatmap').style.gridTemplateColumns=dates.length?`88px repeat(${dates.length},minmax(114px,1fr))`:'1fr';
     if(!dates.length){$('heatmap').innerHTML='<div class="empty">导入名单后显示可用时间</div>';$('heatFormula').textContent='';return;}
     let html='<div></div>'+dates.map(d=>`<div class="heat-head">${Number(d.slice(5,7))} 月 ${Number(d.slice(8))} 日<small>周${'日一二三四五六'[new Date(d+'T00:00:00Z').getUTCDay()]}</small></div>`).join('');
@@ -923,11 +942,11 @@ globalThis.PlannerImportTemplates={"candidates":{"name":"候选人导入模板.x
         const s=cells.get(date+'|'+start+'|'+end);
         if(!s){html+='<div class="heatcell off"><b>—</b><span>无此时段</span></div>';continue;}
         const v=s.average,c=heatColor(s);
-        html+=`<button class="heatcell ${s.enabled?'':'off'}" data-slot="${s.session}" data-batch="${s.id}" ${s.enabled?'':'disabled'} style="background:${c.bg};color:${c.fg}" aria-label="${s.label}，${v==null?'暂无安排':'人均可用 '+v.toFixed(2)+' 分钟'}，${s.count} 位候选人" title="${s.label}\n可用 ${minutes(s.budgetMinutes)} 分钟；面试官 ${s.interviewers.length} 人\n已排 ${s.count} 人；线上 ${s.online} 人；线下 ${s.offline} 人"><b>${v==null?'—':v.toFixed(2)}${v==null?'':'<small>分 / 人</small>'}</b><span>${!s.enabled?'未启用':!s.covered?'场务不足':`${s.count} 人 · ${s.interviewers.length} 位面试官`}</span></button>`;
+        html+=`<button class="heatcell ${s.enabled?'':'off'}" data-slot="${s.session}" data-batch="${s.id}" ${s.enabled?'':'disabled'} style="background:${c.bg};color:${c.fg}" aria-label="${s.label}，${v==null?(s.ongoingCount?s.ongoingCount+' 人面试中，本场无新到场':'暂无安排'):'人均可用 '+v.toFixed(2)+' 分钟'}，${s.count} 位候选人" title="${s.label}\n可用 ${minutes(s.budgetMinutes)} 分钟；面试官 ${s.interviewers.length} 人\n已排 ${s.count} 人；线上 ${s.online} 人；线下 ${s.offline} 人"><b>${v==null?'—':v.toFixed(2)}${v==null?'':'<small>分 / 人</small>'}</b><span>${!s.enabled?'未启用':!s.covered?'场务不足':`${s.count} 人到场 · ${s.ongoingCount} 人面试中`}</span></button>`;
       }
     }
     $('heatmap').innerHTML=html;
-    $('heatFormula').textContent='人均可用 = 本场面试官可用总分钟（扣除间隔）÷ 本场人数。';
+    $('heatFormula').textContent='可用总分钟（扣除间隔）÷ 本场到场人数；“—”表示无新到场。';
   }
   function heatLayout(){
     const slots=result.availableBatches,dates=[...new Set(slots.map(s=>s.date))],ranges=[...new Set(slots.map(s=>s.startSeconds+'|'+s.endSeconds))].map(k=>k.split('|').map(Number)).sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
@@ -973,18 +992,18 @@ globalThis.PlannerImportTemplates={"candidates":{"name":"候选人导入模板.x
     $('staffChart').innerHTML=[...result.workloads].sort((a,b)=>(b.interviewMinutes+b.fieldMinutes)-(a.interviewMinutes+a.fieldMinutes)).map(w=>`<div class="work-row"><span>${esc(w.name)}</span><div class="work-track" title="面试 ${minutes(w.interviewMinutes)} 分钟，场务 ${w.fieldMinutes} 分钟"><i style="width:${100*w.interviewMinutes/max}%"></i><i class="field" style="width:${100*w.fieldMinutes/max}%"></i></div><span class="number">${w.count} 人 / ${w.fieldShifts} 场场务</span></div>`).join('');
   }
   function render(){
-    $('settingsSummary').textContent=`${config.arrivalMode==='batch'?config.batchMinutes+' 分钟 / 批':'按具体时间'} · 参考 ${config.duration} 分钟 · 场务 ${config.field} 人 / 场`;
+    $('settingsSummary').textContent=`${config.arrivalMode==='batch'?config.batchMinutes+' 分钟 / 批':'按具体时间'} · 时长不限 · 场务 ${config.field} 人 / 场`;
     const online=data.candidates.filter(c=>c.online).length,active=new Set(result.sessions.flatMap(s=>s.interviewers.map(p=>p.id))).size;
-    const metrics=[['候选人总数',data.candidates.length,'人',`线下 ${data.candidates.length-online} 人 · 线上 ${online} 人`],['已安排面试',result.matched,'人',`<strong>覆盖率 ${(result.total?100*result.matched/result.total:0).toFixed(1)}%</strong> · 待安排 ${result.unassigned.length} 人`],['参与面试官',active,'位',`工作人员 ${data.staff.length} 位 · 每场 ${config.field} 位场务`],['平均实际面试',minutes(result.averageDuration),'分钟',`参考 ${config.duration} 分钟 · ${result.compressedCount} 人已缩短时长`]];
+    const metrics=[['候选人总数',data.candidates.length,'人',`线下 ${data.candidates.length-online} 人 · 线上 ${online} 人`],['已安排面试',result.matched,'人',`<strong>覆盖率 ${(result.total?100*result.matched/result.total:0).toFixed(1)}%</strong> · 待安排 ${result.unassigned.length} 人`],['参与面试官',active,'位',`工作人员 ${data.staff.length} 位 · 每场 ${config.field} 位场务`],['平均实际面试',minutes(result.averageDuration),'分钟',`时长不限 · 可用时间利用率 ${(result.timeUtilization*100).toFixed(1)}%`]];
     $('metrics').innerHTML=metrics.map(([title,value,unit,foot],i)=>`<div class="metric"><label>${title}<span>0${i+1}</span></label><div class="value">${value}<em>${unit}</em></div><div class="foot">${foot}</div></div>`).join('');
     const warns=result.sessions.flatMap(s=>s.warnings.map(w=>s.label+'：'+w));
     const pending=result.unassigned.length;
     const compression=result.compressedCount?`${result.compressedCount} 人已缩短时长，平均 ${minutes(result.averageDuration)} 分钟。`:'';
     $('globalNotice').innerHTML=pending||warns.length?`<div class="notice"><strong>${pending?pending+' 人待安排':'人员配置需检查'}</strong>${compression?' · '+compression:''}<details><summary>查看原因</summary>${warns.map(esc).join('<br>')||'请在面试安排中查看原因，或调整可用时间和人员。'}</details></div>`:compression?`<div class="notice ok">已安排全部 ${result.total} 人 · ${compression}</div>`:'';
     renderHeat();
-    $('capacityList').innerHTML=result.sessions.map(s=>`<div><div class="capacity-title"><strong style="font-weight:500">${s.label}</strong><span>${s.count} / ${s.standardCapacity} 人</span></div><div class="capacity-track"><i style="width:${s.standardCapacity?Math.min(100,100*s.count/s.standardCapacity):s.count?100:0}%"></i></div><div class="capacity-meta"><span>${s.interviewers.length} 位面试官 · ${s.fieldStaff.length} 位场务</span><span>${s.count?'平均 '+minutes(s.scheduledAverage)+' 分钟':'暂无面试'}</span></div></div>`).join('')||'<div class="empty">暂无时段</div>';
+    $('capacityList').innerHTML=result.sessions.map(s=>`<div><div class="capacity-title"><strong style="font-weight:500">${s.label}</strong><span>${s.enabled?(s.timeUtilization*100).toFixed(1)+'%':'未启用'}</span></div><div class="capacity-track"><i style="width:${100*s.timeUtilization}%"></i></div><div class="capacity-meta"><span>${s.count} 人 · ${s.interviewers.length} 位面试官</span><span>${s.count?'平均 '+minutes(s.scheduledAverage)+' 分钟':'暂无面试'}</span></div></div>`).join('')||'<div class="empty">暂无时段</div>';
     $('slotBadge').textContent=`${result.sessions.filter(s=>s.enabled).length} 个时段`;
-    $('capacityNote').textContent=`参考容量按 ${config.duration} 分钟计算，超出时自动缩短面试。`;
+    $('capacityNote').textContent='优先覆盖候选人，再尽量用满可用时间；面试间隔不计入利用率。';
     $('previewTable').innerHTML=table(result.assignments.slice(0,5),true);
     renderSchedule();renderStaff();
     renderSources();renderRoster();
@@ -1137,9 +1156,9 @@ globalThis.PlannerImportTemplates={"candidates":{"name":"候选人导入模板.x
     dates.forEach((d,i)=>shapes+=`<text x="${280+i*270}" y="120" text-anchor="middle" font-size="17">${d}</text>`);
     ranges.forEach(([start,end],row)=>{shapes+=`<text x="25" y="${187+row*95}" font-size="14">${Batches.clock(start)}–${Batches.clock(end)}</text>`;dates.forEach((date,col)=>{
       const s=cells.get(date+'|'+start+'|'+end),v=s?.average,c=s?heatColor(s):{bg:'#f1f3f5',fg:'#929da8'},x=155+col*270,y=142+row*95;
-      shapes+=`<rect x="${x}" y="${y}" width="250" height="83" rx="10" fill="${c.bg}"/><text x="${x+18}" y="${y+34}" font-size="26" fill="${c.fg}">${v==null?'—':v.toFixed(2)}</text><text x="${x+18}" y="${y+61}" font-size="12" fill="${c.fg}">${!s?'无此时段':!s.enabled?'未启用':!s.covered?'场务不足':s.count+' 位候选人 · '+s.interviewers.length+' 位面试官'}</text>`;
+      shapes+=`<rect x="${x}" y="${y}" width="250" height="83" rx="10" fill="${c.bg}"/><text x="${x+18}" y="${y+34}" font-size="26" fill="${c.fg}">${v==null?'—':v.toFixed(2)}</text><text x="${x+18}" y="${y+61}" font-size="12" fill="${c.fg}">${!s?'无此时段':!s.enabled?'未启用':!s.covered?'场务不足':s.count+' 人到场 · '+s.ongoingCount+' 人面试中'}</text>`;
     });});
-    shapes+=`<text x="45" y="${height-55}" font-size="12" fill="#6f829b">人均可用 = 本场面试官可用总分钟（扣除间隔）÷ 本场人数；无人时显示 —。</text><text x="45" y="${height-29}" font-size="12" fill="#6f829b">已安排 ${result.matched} / ${result.total} 人；末场扣除预留，不足 ${config.batchMinutes} 分钟按实际可用时间计算。</text>`;
+    shapes+=`<text x="45" y="${height-55}" font-size="12" fill="#6f829b">人均可用 = 本场面试官可用总分钟（扣除间隔）÷ 本场到场人数；无新到场时显示 —。</text><text x="45" y="${height-29}" font-size="12" fill="#6f829b">已安排 ${result.matched} / ${result.total} 人；末场扣除预留，不足 ${config.batchMinutes} 分钟按实际可用时间计算。</text>`;
     download('人均可用时间热力图.svg',`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" fill="#142a43">${shapes}</svg>`,'image/svg+xml;charset=utf-8');toast('已保存可缩放的 SVG 热力图');
   }
   document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>navigate(b.dataset.page));
@@ -1165,7 +1184,9 @@ globalThis.PlannerImportTemplates={"candidates":{"name":"候选人导入模板.x
   $('assignmentStart').oninput=renderAssignmentArrival;
   $('assignmentForm').onsubmit=e=>{e.preventDefault();try{
     const adjustment={session:$('assignmentSession').value,interviewer:$('assignmentInterviewer').value,startSeconds:Adjustments.seconds($('assignmentStart').value),endSeconds:Adjustments.seconds($('assignmentEnd').value)};
-    commitConfig({...config,adjustments:{...config.adjustments,[assignmentEditing.id]:adjustment}});$('assignmentDialog').close();toast('调整已保存，可直接导出 Excel');
+    const adjustments={...config.adjustments,[assignmentEditing.id]:adjustment};
+    Adjustments.apply(data,result,adjustments);
+    commitConfig({...config,adjustments});$('assignmentDialog').close();toast('已固定此人，其余自动安排已重新分配');
   }catch(error){$('assignmentError').textContent=error.message;}};
   $('resetOneAssignment').onclick=()=>{try{const adjustments={...config.adjustments};delete adjustments[assignmentEditing.id];commitConfig({...config,adjustments});$('assignmentDialog').close();toast('已恢复此人的自动安排');}catch(error){$('assignmentError').textContent=error.message;}};
   $('resetAdjustments').onclick=()=>askReplace(`恢复 ${result.manualCount} 位候选人的自动安排？可撤销。`,()=>{commitConfig({...config,adjustments:{}});toast('已恢复自动排班');});

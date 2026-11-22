@@ -41,19 +41,19 @@ dialog{border:1px solid var(--line);border-radius:16px;padding:0;width:min(650px
  <div id="loading">正在生成排班…</div><div class="pageintro"><span id="periodLabel"></span></div>
  <details class="settings" id="settings"><summary><strong>排班设置 ⌄</strong><span id="settingsSummary"></span></summary>
   <form class="settings-body" id="settingsForm">
-   <div class="settings-grid"><label>参考时长 / 分钟<input id="duration" type="number" min="1" max="120" step="1" value="5" required></label><label>面试间隔 / 分钟<input id="gap" type="number" min="0" max="30" step="1" value="0" required></label><label>末尾预留 / 分钟<input id="reserve" type="number" min="0" max="119" step="1" value="0" required></label><label>每场场务 / 人<input id="field" type="number" min="0" max="15" step="1" value="1" required></label></div>
+   <div class="settings-grid"><label>对照时长 / 分钟<input id="duration" type="number" min="1" max="120" step="1" value="5" required></label><label>面试间隔 / 分钟<input id="gap" type="number" min="0" max="30" step="1" value="0" required></label><label>末尾预留 / 分钟<input id="reserve" type="number" min="0" max="119" step="1" value="0" required></label><label>每场场务 / 人<input id="field" type="number" min="0" max="15" step="1" value="1" required></label></div>
    <div class="arrival-settings"><label>到场通知<select id="arrivalMode"><option value="batch">按批次候场</option><option value="exact">按具体时间</option></select></label><label>批次间隔 / 分钟<input id="batchMinutes" type="number" min="1" max="240" step="1" value="20" required></label><label>默认候场教室<input id="waitingRoom" maxlength="120" placeholder="如：教学楼 101"></label></div>
    <details class="room-details"><summary>按日期设置教室</summary><div class="date-room-fields" id="dateRoomFields"></div></details>
    <div class="session-toggle" id="sessionToggles"></div>
-   <div class="settings-footer"><span>优先安排全部候选人，必要时缩短面试。</span><div class="flex"><button type="button" id="resetSettings">恢复默认</button><button type="submit" class="primary">应用设置</button></div></div>
+   <div class="settings-footer"><span>时长无上限；优先覆盖全部候选人，再尽量排满。</span><div class="flex"><button type="button" id="resetSettings">恢复默认</button><button type="submit" class="primary">应用设置</button></div></div>
   </form>
  </details>
  <div id="globalNotice" aria-live="polite"></div>
  <section class="section active" id="overview">
   <div class="metrics" id="metrics"></div>
   <div class="grid-main">
-   <article class="card"><div class="card-head"><div><h2>人均可用时间</h2><p id="heatCaption">20 分钟 / 场 · 点击查看安排</p></div></div><div class="heat-scroll"><div class="heatmap" id="heatmap"></div></div><div class="heat-legend"><span>较少</span><i class="gradient"></i><span>充足</span><button class="text" id="exportHeat">下载图表 ↗</button></div><p class="formula" id="heatFormula"></p></article>
-   <article class="card"><div class="card-head"><div><h2>时段安排</h2><p>已安排 / 参考容量</p></div><span class="tag" id="slotBadge"></span></div><div class="capacity-list" id="capacityList"></div><p class="cap-note" id="capacityNote"></p></article>
+   <article class="card"><div class="card-head"><div><h2>人均可用时间</h2><p id="heatCaption">20 分钟 / 场 · 点击查看到场名单</p></div></div><div class="heat-scroll"><div class="heatmap" id="heatmap"></div></div><div class="heat-legend"><span>较少</span><i class="gradient"></i><span>充足</span><button class="text" id="exportHeat">下载图表 ↗</button></div><p class="formula" id="heatFormula"></p></article>
+   <article class="card"><div class="card-head"><div><h2>时段安排</h2><p>面试时间 / 可用时间</p></div><span class="tag" id="slotBadge"></span></div><div class="capacity-list" id="capacityList"></div><p class="cap-note" id="capacityNote"></p></article>
   </div>
   <article class="card bottom-card"><div class="card-head"><h2>近期面试</h2><button class="small" id="viewAll">查看全部 →</button></div><div class="table-wrap" id="previewTable"></div></article>
  </section>
@@ -87,9 +87,9 @@ dialog{border:1px solid var(--line);border-radius:16px;padding:0;width:min(650px
   </article>
   <details class="help-details"><summary>使用说明与排班规则</summary><div class="method-list">
    <div><h3>导入格式</h3><p>读取 .xlsx 首张表。候选人需有学号、姓名、面试时间和线上选项（是/否）；工作人员需有姓名、面试官时间和场务时间。多个时段用顿号或逗号分隔。</p></div>
-   <div><h3>覆盖优先</h3><p>5 分钟是参考。先最大化可安排人数，再尽量接近参考时长，精确到秒。同一场时长相同，一人一位面试官；时间不重叠，场务不兼任。</p></div>
+   <div><h3>覆盖优先</h3><p>5 分钟仅用于对照，不限制时长。先覆盖尽量多的人，再最大化总面试时间，并尽量均衡个人时长。一人一位面试官，扣除间隔和预留后尽量排满。</p></div>
    <div><h3>时间口径</h3><p>实际时长 = 总面试分钟 ÷ 已安排人数。可用时间 =（面试官人数 × 可用分钟 − 间隔）÷ 已安排人数。无人时显示“—”。原时间有重叠时会拆成不重叠场次。</p></div>
-   <div><h3>保存与导出</h3><p>名单只在本机浏览器处理和保存，不会上传服务器。查询表用于通知到场时间与教室；完整 Excel 分为候选人、面试官、场务三张表。在面试安排中可逐人调整时间和面试官，冲突时不保存。手动调整会同步统计与导出；修改名单或参数会保留有效的手动安排，不兼容时需先调整或恢复自动。导入新问卷会重新排班。保存当前网页可备份名单、设置及手动调整；导入和修改均可撤销，刷新后撤销记录清空。</p></div>
+   <div><h3>保存与导出</h3><p>名单只在本机浏览器处理和保存，不会上传服务器。查询表用于通知到场时间与教室；完整 Excel 分为候选人、面试官、场务三张表。在面试安排中可逐人调整时间和面试官，冲突时不保存。手动固定的时间会保留，其余自动安排会重新分配；统计与导出同步更新。修改名单或参数若与固定安排不兼容，需先调整或恢复自动。导入新问卷会重新排班。保存当前网页可备份名单、设置及手动调整；导入和修改均可撤销，刷新后撤销记录清空。</p></div>
   </div></details>
  </section>
  <footer class="footnote"><span id="footerBrand">志愿者面试工作台</span><span id="footerStatus"></span></footer>
@@ -112,7 +112,7 @@ dialog{border:1px solid var(--line);border-radius:16px;padding:0;width:min(650px
    <div class="assignment-availability"><div class="window-head"><h3>空闲时间</h3><button class="text small" type="button" id="suggestAssignment">使用首个空档</button></div><p id="assignmentFree" class="roster-note"></p></div>
    <p class="roster-note" id="assignmentArrival"></p><p class="roster-note">保存后同步统计与导出。时间可精确到秒。</p><p id="assignmentError" class="form-error" role="alert"></p>
   </div>
-  <div class="dialog-foot assignment-foot"><button type="button" class="text" id="resetOneAssignment" hidden>恢复自动</button><button type="button" id="cancelAssignment">取消</button><button class="primary" type="submit" id="saveAssignment">保存调整</button></div>
+  <p class="roster-note" style="padding:0 24px 12px">保存后固定此人的时间，其余自动安排会重新分配。</p><div class="dialog-foot assignment-foot"><button type="button" class="text" id="resetOneAssignment" hidden>恢复自动</button><button type="button" id="cancelAssignment">取消</button><button class="primary" type="submit" id="saveAssignment">保存调整</button></div>
  </form>
 </dialog>
 <dialog id="confirmDialog" aria-labelledby="confirmTitle"><div class="dialog-head"><h2 id="confirmTitle">确认操作</h2></div><div class="dialog-body"><p id="confirmText"></p></div><div class="dialog-foot"><button id="cancelConfirm">取消</button><button id="acceptConfirm" class="primary">确认</button></div></dialog>

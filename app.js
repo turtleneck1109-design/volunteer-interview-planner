@@ -62,7 +62,7 @@
   }
   function renderHeat(){
     const {dates,ranges,cells}=heatLayout();
-    $('heatCaption').textContent=`${config.batchMinutes} 分钟 / 场 · 点击查看安排`;
+    $('heatCaption').textContent=`${config.batchMinutes} 分钟 / 场 · 点击查看到场名单`;
     $('heatmap').style.gridTemplateColumns=dates.length?`88px repeat(${dates.length},minmax(114px,1fr))`:'1fr';
     if(!dates.length){$('heatmap').innerHTML='<div class="empty">导入名单后显示可用时间</div>';$('heatFormula').textContent='';return;}
     let html='<div></div>'+dates.map(d=>`<div class="heat-head">${Number(d.slice(5,7))} 月 ${Number(d.slice(8))} 日<small>周${'日一二三四五六'[new Date(d+'T00:00:00Z').getUTCDay()]}</small></div>`).join('');
@@ -72,11 +72,11 @@
         const s=cells.get(date+'|'+start+'|'+end);
         if(!s){html+='<div class="heatcell off"><b>—</b><span>无此时段</span></div>';continue;}
         const v=s.average,c=heatColor(s);
-        html+=`<button class="heatcell ${s.enabled?'':'off'}" data-slot="${s.session}" data-batch="${s.id}" ${s.enabled?'':'disabled'} style="background:${c.bg};color:${c.fg}" aria-label="${s.label}，${v==null?'暂无安排':'人均可用 '+v.toFixed(2)+' 分钟'}，${s.count} 位候选人" title="${s.label}\n可用 ${minutes(s.budgetMinutes)} 分钟；面试官 ${s.interviewers.length} 人\n已排 ${s.count} 人；线上 ${s.online} 人；线下 ${s.offline} 人"><b>${v==null?'—':v.toFixed(2)}${v==null?'':'<small>分 / 人</small>'}</b><span>${!s.enabled?'未启用':!s.covered?'场务不足':`${s.count} 人 · ${s.interviewers.length} 位面试官`}</span></button>`;
+        html+=`<button class="heatcell ${s.enabled?'':'off'}" data-slot="${s.session}" data-batch="${s.id}" ${s.enabled?'':'disabled'} style="background:${c.bg};color:${c.fg}" aria-label="${s.label}，${v==null?(s.ongoingCount?s.ongoingCount+' 人面试中，本场无新到场':'暂无安排'):'人均可用 '+v.toFixed(2)+' 分钟'}，${s.count} 位候选人" title="${s.label}\n可用 ${minutes(s.budgetMinutes)} 分钟；面试官 ${s.interviewers.length} 人\n已排 ${s.count} 人；线上 ${s.online} 人；线下 ${s.offline} 人"><b>${v==null?'—':v.toFixed(2)}${v==null?'':'<small>分 / 人</small>'}</b><span>${!s.enabled?'未启用':!s.covered?'场务不足':`${s.count} 人到场 · ${s.ongoingCount} 人面试中`}</span></button>`;
       }
     }
     $('heatmap').innerHTML=html;
-    $('heatFormula').textContent='人均可用 = 本场面试官可用总分钟（扣除间隔）÷ 本场人数。';
+    $('heatFormula').textContent='可用总分钟（扣除间隔）÷ 本场到场人数；“—”表示无新到场。';
   }
   function heatLayout(){
     const slots=result.availableBatches,dates=[...new Set(slots.map(s=>s.date))],ranges=[...new Set(slots.map(s=>s.startSeconds+'|'+s.endSeconds))].map(k=>k.split('|').map(Number)).sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
@@ -122,18 +122,18 @@
     $('staffChart').innerHTML=[...result.workloads].sort((a,b)=>(b.interviewMinutes+b.fieldMinutes)-(a.interviewMinutes+a.fieldMinutes)).map(w=>`<div class="work-row"><span>${esc(w.name)}</span><div class="work-track" title="面试 ${minutes(w.interviewMinutes)} 分钟，场务 ${w.fieldMinutes} 分钟"><i style="width:${100*w.interviewMinutes/max}%"></i><i class="field" style="width:${100*w.fieldMinutes/max}%"></i></div><span class="number">${w.count} 人 / ${w.fieldShifts} 场场务</span></div>`).join('');
   }
   function render(){
-    $('settingsSummary').textContent=`${config.arrivalMode==='batch'?config.batchMinutes+' 分钟 / 批':'按具体时间'} · 参考 ${config.duration} 分钟 · 场务 ${config.field} 人 / 场`;
+    $('settingsSummary').textContent=`${config.arrivalMode==='batch'?config.batchMinutes+' 分钟 / 批':'按具体时间'} · 时长不限 · 场务 ${config.field} 人 / 场`;
     const online=data.candidates.filter(c=>c.online).length,active=new Set(result.sessions.flatMap(s=>s.interviewers.map(p=>p.id))).size;
-    const metrics=[['候选人总数',data.candidates.length,'人',`线下 ${data.candidates.length-online} 人 · 线上 ${online} 人`],['已安排面试',result.matched,'人',`<strong>覆盖率 ${(result.total?100*result.matched/result.total:0).toFixed(1)}%</strong> · 待安排 ${result.unassigned.length} 人`],['参与面试官',active,'位',`工作人员 ${data.staff.length} 位 · 每场 ${config.field} 位场务`],['平均实际面试',minutes(result.averageDuration),'分钟',`参考 ${config.duration} 分钟 · ${result.compressedCount} 人已缩短时长`]];
+    const metrics=[['候选人总数',data.candidates.length,'人',`线下 ${data.candidates.length-online} 人 · 线上 ${online} 人`],['已安排面试',result.matched,'人',`<strong>覆盖率 ${(result.total?100*result.matched/result.total:0).toFixed(1)}%</strong> · 待安排 ${result.unassigned.length} 人`],['参与面试官',active,'位',`工作人员 ${data.staff.length} 位 · 每场 ${config.field} 位场务`],['平均实际面试',minutes(result.averageDuration),'分钟',`时长不限 · 可用时间利用率 ${(result.timeUtilization*100).toFixed(1)}%`]];
     $('metrics').innerHTML=metrics.map(([title,value,unit,foot],i)=>`<div class="metric"><label>${title}<span>0${i+1}</span></label><div class="value">${value}<em>${unit}</em></div><div class="foot">${foot}</div></div>`).join('');
     const warns=result.sessions.flatMap(s=>s.warnings.map(w=>s.label+'：'+w));
     const pending=result.unassigned.length;
     const compression=result.compressedCount?`${result.compressedCount} 人已缩短时长，平均 ${minutes(result.averageDuration)} 分钟。`:'';
     $('globalNotice').innerHTML=pending||warns.length?`<div class="notice"><strong>${pending?pending+' 人待安排':'人员配置需检查'}</strong>${compression?' · '+compression:''}<details><summary>查看原因</summary>${warns.map(esc).join('<br>')||'请在面试安排中查看原因，或调整可用时间和人员。'}</details></div>`:compression?`<div class="notice ok">已安排全部 ${result.total} 人 · ${compression}</div>`:'';
     renderHeat();
-    $('capacityList').innerHTML=result.sessions.map(s=>`<div><div class="capacity-title"><strong style="font-weight:500">${s.label}</strong><span>${s.count} / ${s.standardCapacity} 人</span></div><div class="capacity-track"><i style="width:${s.standardCapacity?Math.min(100,100*s.count/s.standardCapacity):s.count?100:0}%"></i></div><div class="capacity-meta"><span>${s.interviewers.length} 位面试官 · ${s.fieldStaff.length} 位场务</span><span>${s.count?'平均 '+minutes(s.scheduledAverage)+' 分钟':'暂无面试'}</span></div></div>`).join('')||'<div class="empty">暂无时段</div>';
+    $('capacityList').innerHTML=result.sessions.map(s=>`<div><div class="capacity-title"><strong style="font-weight:500">${s.label}</strong><span>${s.enabled?(s.timeUtilization*100).toFixed(1)+'%':'未启用'}</span></div><div class="capacity-track"><i style="width:${100*s.timeUtilization}%"></i></div><div class="capacity-meta"><span>${s.count} 人 · ${s.interviewers.length} 位面试官</span><span>${s.count?'平均 '+minutes(s.scheduledAverage)+' 分钟':'暂无面试'}</span></div></div>`).join('')||'<div class="empty">暂无时段</div>';
     $('slotBadge').textContent=`${result.sessions.filter(s=>s.enabled).length} 个时段`;
-    $('capacityNote').textContent=`参考容量按 ${config.duration} 分钟计算，超出时自动缩短面试。`;
+    $('capacityNote').textContent='优先覆盖候选人，再尽量用满可用时间；面试间隔不计入利用率。';
     $('previewTable').innerHTML=table(result.assignments.slice(0,5),true);
     renderSchedule();renderStaff();
     renderSources();renderRoster();
@@ -286,9 +286,9 @@
     dates.forEach((d,i)=>shapes+=`<text x="${280+i*270}" y="120" text-anchor="middle" font-size="17">${d}</text>`);
     ranges.forEach(([start,end],row)=>{shapes+=`<text x="25" y="${187+row*95}" font-size="14">${Batches.clock(start)}–${Batches.clock(end)}</text>`;dates.forEach((date,col)=>{
       const s=cells.get(date+'|'+start+'|'+end),v=s?.average,c=s?heatColor(s):{bg:'#f1f3f5',fg:'#929da8'},x=155+col*270,y=142+row*95;
-      shapes+=`<rect x="${x}" y="${y}" width="250" height="83" rx="10" fill="${c.bg}"/><text x="${x+18}" y="${y+34}" font-size="26" fill="${c.fg}">${v==null?'—':v.toFixed(2)}</text><text x="${x+18}" y="${y+61}" font-size="12" fill="${c.fg}">${!s?'无此时段':!s.enabled?'未启用':!s.covered?'场务不足':s.count+' 位候选人 · '+s.interviewers.length+' 位面试官'}</text>`;
+      shapes+=`<rect x="${x}" y="${y}" width="250" height="83" rx="10" fill="${c.bg}"/><text x="${x+18}" y="${y+34}" font-size="26" fill="${c.fg}">${v==null?'—':v.toFixed(2)}</text><text x="${x+18}" y="${y+61}" font-size="12" fill="${c.fg}">${!s?'无此时段':!s.enabled?'未启用':!s.covered?'场务不足':s.count+' 人到场 · '+s.ongoingCount+' 人面试中'}</text>`;
     });});
-    shapes+=`<text x="45" y="${height-55}" font-size="12" fill="#6f829b">人均可用 = 本场面试官可用总分钟（扣除间隔）÷ 本场人数；无人时显示 —。</text><text x="45" y="${height-29}" font-size="12" fill="#6f829b">已安排 ${result.matched} / ${result.total} 人；末场扣除预留，不足 ${config.batchMinutes} 分钟按实际可用时间计算。</text>`;
+    shapes+=`<text x="45" y="${height-55}" font-size="12" fill="#6f829b">人均可用 = 本场面试官可用总分钟（扣除间隔）÷ 本场到场人数；无新到场时显示 —。</text><text x="45" y="${height-29}" font-size="12" fill="#6f829b">已安排 ${result.matched} / ${result.total} 人；末场扣除预留，不足 ${config.batchMinutes} 分钟按实际可用时间计算。</text>`;
     download('人均可用时间热力图.svg',`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" fill="#142a43">${shapes}</svg>`,'image/svg+xml;charset=utf-8');toast('已保存可缩放的 SVG 热力图');
   }
   document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>navigate(b.dataset.page));
@@ -314,7 +314,9 @@
   $('assignmentStart').oninput=renderAssignmentArrival;
   $('assignmentForm').onsubmit=e=>{e.preventDefault();try{
     const adjustment={session:$('assignmentSession').value,interviewer:$('assignmentInterviewer').value,startSeconds:Adjustments.seconds($('assignmentStart').value),endSeconds:Adjustments.seconds($('assignmentEnd').value)};
-    commitConfig({...config,adjustments:{...config.adjustments,[assignmentEditing.id]:adjustment}});$('assignmentDialog').close();toast('调整已保存，可直接导出 Excel');
+    const adjustments={...config.adjustments,[assignmentEditing.id]:adjustment};
+    Adjustments.apply(data,result,adjustments);
+    commitConfig({...config,adjustments});$('assignmentDialog').close();toast('已固定此人，其余自动安排已重新分配');
   }catch(error){$('assignmentError').textContent=error.message;}};
   $('resetOneAssignment').onclick=()=>{try{const adjustments={...config.adjustments};delete adjustments[assignmentEditing.id];commitConfig({...config,adjustments});$('assignmentDialog').close();toast('已恢复此人的自动安排');}catch(error){$('assignmentError').textContent=error.message;}};
   $('resetAdjustments').onclick=()=>askReplace(`恢复 ${result.manualCount} 位候选人的自动安排？可撤销。`,()=>{commitConfig({...config,adjustments:{}});toast('已恢复自动排班');});

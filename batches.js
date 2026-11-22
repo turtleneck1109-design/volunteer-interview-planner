@@ -36,7 +36,8 @@
         const gapSeconds=gaps.reduce((sum,[a,b])=>sum+Math.max(0,Math.min(b,window.endSeconds)-Math.max(a,start)),0);
         const budgetMinutes=s.enabled&&s.covered?Math.max(0,((window.endSeconds-start)*s.interviewers.length-gapSeconds)/60):0;
         const count=group?.count||0;
-        windows.push({...window,session:s.id,count,online:group?.online||0,offline:group?.offline||0,enabled:s.enabled,covered:s.covered,interviewers:s.interviewers,fieldStaff:s.fieldStaff,budgetMinutes,average:count?budgetMinutes/count:null});
+        const ongoingCount=assignments.filter(a=>a.session===s.id&&a.startSeconds<window.endSeconds&&a.endSeconds>start).length;
+        windows.push({...window,session:s.id,count,ongoingCount,online:group?.online||0,offline:group?.offline||0,enabled:s.enabled,covered:s.covered,interviewers:s.interviewers,fieldStaff:s.fieldStaff,budgetMinutes,average:count?budgetMinutes/count:null});
       }
       return windows;
     }).sort((a,b)=>a.date.localeCompare(b.date)||a.startSeconds-b.startSeconds);

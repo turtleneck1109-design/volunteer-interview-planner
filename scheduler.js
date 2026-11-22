@@ -87,85 +87,125 @@
       return {...s,enabled,roles,interviewers,fieldStaff,usable,covered,per,capacity:covered?per*interviewers.length:0,warnings};
     });
   }
-  // Successive shortest augmenting paths: maximum coverage first, then scarce
-  // availability and convex session occupancy costs. No fabricated availability.
-  function match(candidates,sessions) {
-    const N=candidates.length,source=N+sessions.length,sink=source+1,V=sink+1,g=Array.from({length:V},()=>[]);
-    function edge(a,b,cap,cost){const x={to:b,rev:g[b].length,cap,cost,initial:cap};g[a].push(x);g[b].push({to:a,rev:g[a].length-1,cap:0,cost:-cost,initial:0});return x;}
+  // Maximum coverage, then maximum interview seconds. A second cost breaks
+  // ties by scarce availability and balanced occupancy; it cannot reduce time.
+  function match(candidates,units,gapSeconds) {
+    const N=candidates.length,source=N+units.length,sink=source+1,V=sink+1,g=Array.from({length:V},()=>[]);
+    function edge(a,b,cap,time,tie){const x={to:b,rev:g[b].length,cap,time,tie};g[a].push(x);g[b].push({to:a,rev:g[a].length-1,cap:0,time:-time,tie:-tie});return x;}
     const refs=[];
     candidates.forEach((c,i)=>{
-      const available=sessions.filter(s=>s.capacity&&c.slots.includes(s.id));
-      edge(source,i,1,available.length*10000);
-      refs[i]=available.map(s=>({s:sessions.indexOf(s),e:edge(i,N+sessions.indexOf(s),1,0)}));
+      const available=units.map((u,j)=>({u,j})).filter(({u})=>u.capacity&&c.slots.includes(u.session));
+      edge(source,i,1,0,new Set(available.map(({u})=>u.session)).size*10000);
+      refs[i]=available.map(({u,j})=>({unit:j,e:edge(i,N+j,1,0,0)}));
     });
-    sessions.forEach((s,j)=>{for(let k=1;k<=Math.min(s.capacity,N);k++)edge(N+j,sink,1,Math.round(1000*(2*k-1)/s.capacity));});
+    units.forEach((u,j)=>{for(let k=1;k<=Math.min(u.capacity,N);k++)edge(N+j,sink,1,k<=u.staff.length?-(u.end-u.start):gapSeconds,Math.round(1000*(2*k-1)/u.capacity));});
     let flow=0;
     while(true){
-      const d=Array(V).fill(Infinity),prev=Array(V),inq=Array(V).fill(false),q=[source];d[source]=0;inq[source]=true;
+      const d=Array(V).fill(Infinity),tie=Array(V).fill(Infinity),prev=Array(V),inq=Array(V).fill(false),q=[source];d[source]=0;tie[source]=0;inq[source]=true;
       for(let h=0;h<q.length;h++){
         const u=q[h];inq[u]=false;
-        g[u].forEach((e,k)=>{if(e.cap>0&&d[e.to]>d[u]+e.cost){d[e.to]=d[u]+e.cost;prev[e.to]=[u,k];if(!inq[e.to]){q.push(e.to);inq[e.to]=true;}}});
+        g[u].forEach((e,k)=>{const next=d[u]+e.time,t=tie[u]+e.tie;if(e.cap>0&&(next<d[e.to]||(next===d[e.to]&&t<tie[e.to]))){d[e.to]=next;tie[e.to]=t;prev[e.to]=[u,k];if(!inq[e.to]){q.push(e.to);inq[e.to]=true;}}});
       }
       if(!prev[sink])break;
       for(let v=sink;v!==source;){const [u,k]=prev[v],e=g[u][k];e.cap--;g[v][e.rev].cap++;v=u;}flow++;
     }
-    return {flow,assignment:refs.map(list=>list.find(x=>x.e.cap===0)?.s??-1)};
+    const assignment=refs.map(list=>list.find(x=>x.e.cap===0)?.unit??-1),counts=Array(units.length).fill(0);
+    assignment.forEach(j=>{if(j>=0)counts[j]++;});
+    const interviewSeconds=units.reduce((sum,u,j)=>sum+Math.min(counts[j],u.staff.length)*(u.end-u.start)-Math.max(0,counts[j]-u.staff.length)*gapSeconds,0);
+    return {flow,assignment,interviewSeconds};
+  }
+  function fixedAssignments(data,sessions,config){
+    const fixed=[];
+    for(const [id,v] of Object.entries(config.adjustments||{})){
+      const c=data.candidates.find(c=>c.id===id),s=sessions.find(s=>s.id===v?.session),p=data.staff.find(p=>p.id===v?.interviewer);
+      const fail=message=>{throw Error(`手动安排「${c?.name||id}」：${message}`);};
+      if(!c)fail('候选人已不存在。');
+      if(!s||!c.slots.includes(s.id))fail('时段不在候选人的可用时间内。');
+      if(!s.enabled)fail('该时段已停用。');
+      if(!p||!p.interview.includes(s.id)||s.roles[p.id]!=='interview')fail('所选人员在该时段未担任面试官。');
+      if(!s.covered)fail('该时段场务不足。');
+      const startSeconds=v.startSeconds,endSeconds=v.endSeconds,durationSeconds=endSeconds-startSeconds;
+      if(!Number.isInteger(startSeconds)||!Number.isInteger(endSeconds)||durationSeconds<1)fail('结束时间必须晚于开始时间，精确到秒。');
+      if(startSeconds<s.start*60||endSeconds>(s.end-config.reserve)*60)fail('起止时间超出所选时段或占用了末尾预留。');
+      fixed.push({...c,session:s.id,interviewer:p.id,startSeconds,endSeconds,durationSeconds,start:startSeconds/60,end:endSeconds/60,duration:durationSeconds/60,status:'手动调整',manual:true});
+    }
+    const groups=new Map();
+    for(const a of fixed){const key=a.session+'|'+a.interviewer;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(a);}
+    for(const lane of groups.values()){
+      lane.sort((a,b)=>a.startSeconds-b.startSeconds);
+      for(let i=1;i<lane.length;i++)if(lane[i].startSeconds<lane[i-1].endSeconds+config.gap*60)throw Error(`手动安排时间冲突：「${lane[i-1].name}」与「${lane[i].name}」，请保留面试间隔。`);
+    }
+    return fixed;
+  }
+  function summarize(data,result){
+    const {config,sessions,assignments}=result,workloads=new Map(data.staff.map(p=>[p.id,{...p,count:0,interviewMinutes:0,fieldMinutes:0,fieldShifts:0,shifts:0}]));
+    for(const s of sessions){
+      const people=assignments.filter(a=>a.session===s.id),durations=people.map(a=>a.durationSeconds);let gapMinutes=0;
+      s.lanes=s.interviewers.map(p=>{
+        const lane=people.filter(a=>a.interviewer===p.id),w=workloads.get(p.id);
+        w.count+=lane.length;w.interviewMinutes+=lane.reduce((sum,a)=>sum+a.durationSeconds,0)/60;w.shifts++;
+        gapMinutes+=Math.max(0,lane.length-1)*config.gap;return {staff:p.id,count:lane.length};
+      });
+      for(const p of s.fieldStaff){const w=workloads.get(p.id);w.fieldMinutes+=s.end-s.start;w.fieldShifts++;w.shifts++;}
+      s.count=people.length;s.online=people.filter(c=>c.online).length;s.offline=s.count-s.online;
+      s.budgetMinutes=s.interviewers.length*s.usable-gapMinutes;s.average=s.count?s.budgetMinutes/s.count:null;
+      s.interviewMinutes=durations.reduce((sum,n)=>sum+n,0)/60;
+      s.scheduledAverage=s.count?s.interviewMinutes/s.count:null;s.durationSeconds=s.count?Math.round(s.scheduledAverage*60):null;
+      s.availableMinutes=s.enabled&&s.covered?s.interviewers.length*s.usable:0;
+      s.timeUtilization=s.availableMinutes?s.interviewMinutes/s.availableMinutes:0;
+      s.utilization=s.standardCapacity?s.count/s.standardCapacity:null;
+      const minimum=durations.length?Math.min(...durations):1;
+      s.per=Math.max(0,Math.floor((s.usable*60+config.gap*60)/(minimum+config.gap*60)));
+      s.capacity=s.enabled&&s.covered?s.per*s.interviewers.length:0;
+    }
+    assignments.sort((a,b)=>a.session.localeCompare(b.session)||a.startSeconds-b.startSeconds||a.interviewer.localeCompare(b.interviewer));
+    const durations=assignments.map(a=>a.durationSeconds),totalMinutes=durations.reduce((sum,n)=>sum+n,0)/60,availableMinutes=sessions.reduce((sum,s)=>sum+s.availableMinutes,0);
+    return Object.assign(result,{workloads:[...workloads.values()],manualCount:assignments.filter(a=>a.manual).length,matched:assignments.length,total:data.candidates.length,capacity:sessions.reduce((sum,s)=>sum+s.capacity,0),standardCapacity:sessions.reduce((sum,s)=>sum+s.standardCapacity,0),minimumSeconds:durations.length?Math.min(...durations):null,averageDuration:durations.length?totalMinutes/durations.length:null,minDuration:durations.length?Math.min(...durations)/60:null,maxDuration:durations.length?Math.max(...durations)/60:null,compressedCount:durations.filter(n=>n<config.duration*60).length,extendedCount:durations.filter(n=>n>config.duration*60).length,interviewMinutes:totalMinutes,availableMinutes,timeUtilization:availableMinutes?totalMinutes/availableMinutes:0});
   }
   function solve(data,input={}) {
     const config={...defaults,...input,overrides:{...(input.overrides||{})},enabled:[...(input.enabled??(data.sessions||SESSIONS).map(s=>s.id))]};
     for(const [k,lo,hi] of [['duration',1,120],['gap',0,30],['reserve',0,119],['field',0,15]])if(!Number.isInteger(config[k])||config[k]<lo||config[k]>hi)throw Error('排班参数超出范围。');
-    const sessions=staffPlan(data,config),referenceSeconds=config.duration*60,gapSeconds=config.gap*60;
+    const sessions=staffPlan(data,config),gapSeconds=config.gap*60;
     sessions.forEach(s=>{s.standardCapacity=s.capacity;s.standardPer=s.per;});
-    const setCapacity=seconds=>sessions.forEach(s=>{
-      s.per=Math.max(0,Math.floor((s.usable*60+gapSeconds)/(seconds+gapSeconds)));
-      s.capacity=s.enabled&&s.covered?s.per*s.interviewers.length:0;
-    });
-    // First maximize coverage at one-second precision, then find the largest
-    // common duration that preserves that coverage. The reference is soft.
-    let matched=match(data.candidates,sessions),minimumSeconds=referenceSeconds;
-    if(matched.flow<data.candidates.length){
-      setCapacity(1);const maximum=match(data.candidates,sessions);
-      if(maximum.flow>matched.flow){
-        let lo=1,hi=referenceSeconds;
-        while(lo<hi){const mid=Math.ceil((lo+hi)/2);setCapacity(mid);if(match(data.candidates,sessions).flow===maximum.flow)lo=mid;else hi=mid-1;}
-        minimumSeconds=lo;
+    const fixed=fixedAssignments(data,sessions,config),fixedIds=new Set(fixed.map(a=>a.id)),candidates=data.candidates.filter(c=>!fixedIds.has(c.id)),units=[];
+    // Fixed interviews remain exact. Pack automatic interviews into the remaining
+    // uninterrupted windows, reserving gaps on both sides of every fixed booking.
+    for(const s of sessions){
+      if(!s.enabled||!s.covered)continue;
+      const windows=new Map(),limit=(s.end-config.reserve)*60;
+      const add=(start,end,p)=>{if(end<=start)return;const key=start+'|'+end;if(!windows.has(key))windows.set(key,{session:s.id,start,end,staff:[]});windows.get(key).staff.push(p);};
+      for(const p of s.interviewers){
+        let start=s.start*60;
+        const anchors=fixed.filter(a=>a.session===s.id&&a.interviewer===p.id).sort((a,b)=>a.startSeconds-b.startSeconds);
+        for(const a of anchors){add(start,a.startSeconds-gapSeconds,p);start=a.endSeconds+gapSeconds;}
+        add(start,limit,p);
       }
-      setCapacity(minimumSeconds);matched=match(data.candidates,sessions);
+      units.push(...windows.values());
     }
-    const workloads=Object.fromEntries(data.staff.map(p=>[p.id,{...p,count:0,interviewMinutes:0,fieldMinutes:0,fieldShifts:0,shifts:0}]));
-    const assignments=[];
-    for(let j=0;j<sessions.length;j++){
-      const s=sessions[j],people=data.candidates.filter((c,i)=>matched.assignment[i]===j);
-      const lanes=s.interviewers.map(p=>({p,people:[]}));
-      // Balance each block first (difference at most one), then total workload.
+    const setCapacity=seconds=>units.forEach(u=>u.capacity=Math.max(0,Math.floor((u.end-u.start+gapSeconds)/(seconds+gapSeconds)))*u.staff.length);
+    setCapacity(1);const maximum=match(candidates,units,gapSeconds);
+    // Among maximum-time, maximum-coverage solutions, maximize the shortest
+    // automatic interview. The reference never bounds this search.
+    let lo=1,hi=maximum.flow?Math.max(1,...units.map(u=>u.end-u.start)):1;
+    while(lo<hi){const mid=Math.ceil((lo+hi)/2);setCapacity(mid);const trial=match(candidates,units,gapSeconds);if(trial.flow===maximum.flow&&trial.interviewSeconds===maximum.interviewSeconds)lo=mid;else hi=mid-1;}
+    setCapacity(lo);const matched=match(candidates,units,gapSeconds),assignments=[...fixed],loads=new Map(data.staff.map(p=>[p.id,fixed.filter(a=>a.interviewer===p.id).length]));
+    for(let j=0;j<units.length;j++){
+      const u=units[j],people=candidates.filter((c,i)=>matched.assignment[i]===j),lanes=u.staff.map(p=>({p,people:[]}));
       for(const c of people.sort((a,b)=>a.slots.length-b.slots.length||a.id.localeCompare(b.id))){
-        lanes.sort((a,b)=>a.people.length-b.people.length||workloads[a.p.id].count-workloads[b.p.id].count||a.p.id.localeCompare(b.p.id));
-        const lane=lanes[0];lane.people.push(c);workloads[lane.p.id].count++;
+        lanes.sort((a,b)=>a.people.length-b.people.length||loads.get(a.p.id)-loads.get(b.p.id)||a.p.id.localeCompare(b.p.id));
+        const lane=lanes[0];lane.people.push(c);loads.set(lane.p.id,loads.get(lane.p.id)+1);
       }
-      const maxLaneCount=Math.max(0,...lanes.map(l=>l.people.length));
-      // Recover spare time in quieter sessions without reducing coverage.
-      s.durationSeconds=maxLaneCount?Math.min(referenceSeconds,Math.floor((s.usable*60-(maxLaneCount-1)*gapSeconds)/maxLaneCount)):null;
-      let gapMinutes=0;
       for(const lane of lanes){
-        lane.people.sort((a,b)=>Number(b.online)-Number(a.online)||a.id.localeCompare(b.id));
-        gapMinutes+=Math.max(0,lane.people.length-1)*config.gap;
-        lane.people.forEach((c,index)=>{
-          const startSeconds=s.start*60+index*(s.durationSeconds+gapSeconds),endSeconds=startSeconds+s.durationSeconds;
-          assignments.push({...c,session:s.id,interviewer:lane.p.id,startSeconds,endSeconds,durationSeconds:s.durationSeconds,start:startSeconds/60,end:endSeconds/60,duration:s.durationSeconds/60,status:'已安排'});
+        const n=lane.people.length;if(!n)continue;
+        const available=u.end-u.start-(n-1)*gapSeconds,base=Math.floor(available/n),remainder=available%n;let startSeconds=u.start;
+        lane.people.sort((a,b)=>Number(b.online)-Number(a.online)||a.id.localeCompare(b.id)).forEach((c,i)=>{
+          const durationSeconds=base+(i<remainder?1:0),endSeconds=startSeconds+durationSeconds;
+          assignments.push({...c,session:u.session,interviewer:lane.p.id,startSeconds,endSeconds,durationSeconds,start:startSeconds/60,end:endSeconds/60,duration:durationSeconds/60,status:'已安排'});startSeconds=endSeconds+gapSeconds;
         });
-        workloads[lane.p.id].interviewMinutes+=lane.people.length*(s.durationSeconds||0)/60;
-        workloads[lane.p.id].shifts++;
       }
-      s.fieldStaff.forEach(p=>{workloads[p.id].fieldMinutes+=s.end-s.start;workloads[p.id].fieldShifts++;workloads[p.id].shifts++;});
-      s.count=people.length;s.online=people.filter(c=>c.online).length;s.offline=people.length-s.online;
-      s.budgetMinutes=s.interviewers.length*s.usable-gapMinutes;
-      s.average=s.count?s.budgetMinutes/s.count:null;s.scheduledAverage=s.count?s.durationSeconds/60:null;s.utilization=s.standardCapacity?s.count/s.standardCapacity:null;
-      s.lanes=lanes.map(l=>({staff:l.p.id,count:l.people.length}));
     }
-    const unassigned=data.candidates.filter((c,i)=>matched.assignment[i]===-1).map(c=>({...c,status:'待安排',reason:!c.slots.length?'未填写可用时段':!c.slots.some(id=>config.enabled.includes(id))?'所选时段均未启用':!c.slots.some(id=>{const s=sessions.find(s=>s.id===id);return s?.enabled&&s.covered&&s.interviewers.length;})?'可用时段缺少面试官或场务':'扣除间隔和预留后，可用时间不足（已按秒压缩）'}));
-    assignments.sort((a,b)=>a.session.localeCompare(b.session)||a.start-b.start||a.interviewer.localeCompare(b.interviewer));
-    const durations=assignments.map(a=>a.durationSeconds);
-    return {config,sessions,assignments,unassigned,workloads:Object.values(workloads),matched:matched.flow,total:data.candidates.length,capacity:sessions.reduce((n,s)=>n+s.capacity,0),standardCapacity:sessions.reduce((n,s)=>n+s.standardCapacity,0),minimumSeconds,averageDuration:durations.length?durations.reduce((n,v)=>n+v,0)/durations.length/60:null,minDuration:durations.length?Math.min(...durations)/60:null,maxDuration:durations.length?Math.max(...durations)/60:null,compressedCount:durations.filter(v=>v<referenceSeconds).length};
+    const unassigned=candidates.filter((c,i)=>matched.assignment[i]===-1).map(c=>({...c,status:'待安排',reason:!c.slots.length?'未填写可用时段':!c.slots.some(id=>config.enabled.includes(id))?'所选时段均未启用':!c.slots.some(id=>{const s=sessions.find(s=>s.id===id);return s?.enabled&&s.covered&&s.interviewers.length;})?'可用时段缺少面试官或场务':'扣除间隔、预留和固定安排后，可用时间不足（已按秒分配）'}));
+    return summarize(data,{config,sessions,assignments,unassigned});
   }
   function validate(data,result){
     const errors=[],seen=new Set(),groups={};
@@ -175,7 +215,7 @@
       if(!c||!s||!p||!c.slots.includes(a.session)||!p.interview.includes(a.session))errors.push('超出可用时段');
       if(!s||!p)continue;
       if(!s.enabled||s.roles[p.id]!=='interview'||s.fieldStaff.length<result.config.field)errors.push('人员角色冲突或场务不足');
-      if(!Number.isInteger(a.durationSeconds)||a.durationSeconds<1||a.durationSeconds>result.config.duration*60||a.startSeconds<s.start*60||a.endSeconds>(s.end-result.config.reserve)*60||a.endSeconds-a.startSeconds!==a.durationSeconds||a.start!==a.startSeconds/60||a.end!==a.endSeconds/60||a.duration!==a.durationSeconds/60)errors.push('面试时间越界');
+      if(!Number.isInteger(a.durationSeconds)||a.durationSeconds<1||a.startSeconds<s.start*60||a.endSeconds>(s.end-result.config.reserve)*60||a.endSeconds-a.startSeconds!==a.durationSeconds||a.start!==a.startSeconds/60||a.end!==a.endSeconds/60||a.duration!==a.durationSeconds/60)errors.push('面试时间越界');
       (groups[a.session+'|'+a.interviewer]??=[]).push(a);
     }
     for(const g of Object.values(groups)){g.sort((a,b)=>a.startSeconds-b.startSeconds);for(let i=1;i<g.length;i++)if(g[i].startSeconds<g[i-1].endSeconds+result.config.gap*60)errors.push('面试官时间冲突');}
@@ -184,6 +224,6 @@
     for(const s of result.sessions){if(s.count>s.capacity)errors.push('时段超容量');for(const p of s.fieldStaff)if(!p.field.includes(s.id))errors.push('场务超出可用时段');}
     return [...new Set(errors)];
   }
-  root.Planner={SESSIONS,defaults,normalize,solve,validate};
+  root.Planner={SESSIONS,defaults,normalize,solve,validate,summarize};
   if(typeof module!=='undefined')module.exports=root.Planner;
 })(typeof globalThis!=='undefined'?globalThis:this);
