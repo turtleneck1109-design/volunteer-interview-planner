@@ -52,16 +52,19 @@
     $('embedded-config').textContent=JSON.stringify(config).replace(/</g,'\\u003c');
     persist();
   }
+  function heatBands(){return [
+    {bg:'#fee2e2',fg:'#991b1b',label:`较少 < ${config.duration} 分钟`},
+    {bg:'#fef3c7',fg:'#854d0e',label:`一般 ${config.duration}–${2*config.duration} 分钟`},
+    {bg:'#dcfce7',fg:'#166534',label:`充足 ≥ ${2*config.duration} 分钟`},
+    {bg:'#f1f3f5',fg:'#64748b',label:'无新到场 / 未启用'}
+  ];}
   function heatColor(s){
-    if(!s.enabled||!s.count)return {bg:'#f1f3f5',fg:'#929da8'};
-    const ratio=s.average/config.duration;
-    if(ratio<0.5)return {bg:'#2563eb',fg:'#fff'};
-    if(ratio<0.8)return {bg:'#93c5fd',fg:'#153e75'};
-    if(ratio<1)return {bg:'#bfdbfe',fg:'#194b88'};
-    return {bg:'#eff6ff',fg:'#37648f'};
+    const bands=heatBands();
+    return !s.enabled||!s.count||s.average==null?bands[3]:bands[s.average<config.duration?0:s.average<2*config.duration?1:2];
   }
   function renderHeat(){
     const {dates,ranges,cells}=heatLayout();
+    $('heatLegend').innerHTML=heatBands().map(c=>`<span><i style="background:${c.bg};border-color:${c.fg}" aria-hidden="true"></i>${esc(c.label)}</span>`).join('');
     $('heatCaption').textContent=`${config.batchMinutes} 分钟 / 场 · 点击查看到场名单`;
     $('heatmap').style.gridTemplateColumns=dates.length?`88px repeat(${dates.length},minmax(114px,1fr))`:'1fr';
     if(!dates.length){$('heatmap').innerHTML='<div class="empty">导入名单后显示可用时间</div>';$('heatFormula').textContent='';return;}
@@ -109,6 +112,9 @@
     $('undoSchedule').disabled=!history.length;$('resetAdjustments').hidden=!result.manualCount;
   }
   function renderStaff(){
+    const duties=dutyMatrix();
+    $('dutyTable').innerHTML='<table class="duty-table"><caption class="sr-only">每位工作人员在各时段的实际职责</caption><thead><tr><th scope="col">工作人员</th>'+result.sessions.map(s=>`<th scope="col">${s.date}<br>${hm(s.start)}–${hm(s.end)}</th>`).join('')+'<th scope="col">面试人数</th><th scope="col">场务班次</th></tr></thead><tbody>'+duties.map(({person,cells,workload})=>`<tr><th scope="row"><strong>${esc(person.name)}</strong><span class="duty-department">${esc(person.department)}</span></th>${cells.map(c=>`<td><span class="duty-badge ${c.kind}">${c.label}</span></td>`).join('')}<td>${workload.count}</td><td>${workload.fieldShifts}</td></tr>`).join('')+(!duties.length?`<tr><td class="empty" colspan="${result.sessions.length+3}">导入工作人员名单后自动显示职责</td></tr>`:'')+'</tbody></table>';
+    $('exportDuties').disabled=!duties.length;
     $('staffTable').innerHTML='<table><thead><tr><th>工作人员</th>'+data.sessions.map(s=>`<th>${Number(s.date.slice(5,7))} 月 ${s.day} 日<br>${hm(s.start)}–${hm(s.end)}</th>`).join('')+'<th>面试人数</th><th>场务班次</th></tr></thead><tbody>'+data.staff.map(p=>{
       const w=result.workloads.find(w=>w.id===p.id);
       return `<tr><td><strong>${esc(p.name)}</strong><span class="role-label">${esc(p.department)}</span></td>`+result.sessions.map(s=>{
@@ -121,6 +127,12 @@
     const max=Math.max(1,...result.workloads.map(w=>w.interviewMinutes+w.fieldMinutes));
     $('staffChart').innerHTML=[...result.workloads].sort((a,b)=>(b.interviewMinutes+b.fieldMinutes)-(a.interviewMinutes+a.fieldMinutes)).map(w=>`<div class="work-row"><span>${esc(w.name)}</span><div class="work-track" title="面试 ${minutes(w.interviewMinutes)} 分钟，场务 ${w.fieldMinutes} 分钟"><i style="width:${100*w.interviewMinutes/max}%"></i><i class="field" style="width:${100*w.fieldMinutes/max}%"></i></div><span class="number">${w.count} 人 / ${w.fieldShifts} 场场务</span></div>`).join('');
   }
+  function dutyMatrix(){return data.staff.map(person=>({person,workload:result.workloads.find(w=>w.id===person.id),cells:result.sessions.map(s=>{
+    if(!person.interview.includes(s.id)&&!person.field.includes(s.id))return {kind:'unavailable',label:'—'};
+    if(!s.enabled)return {kind:'off',label:'未启用'};
+    const role=s.roles[person.id];
+    return role==='interview'?{kind:'interview',label:'面试官'}:role==='field'?{kind:'field',label:'场务'}:{kind:'off',label:'未排班'};
+  })}));}
   function render(){
     $('settingsSummary').textContent=`${config.arrivalMode==='batch'?config.batchMinutes+' 分钟 / 批':'按具体时间'} · 时长不限 · 场务 ${config.field} 人 / 场`;
     const online=data.candidates.filter(c=>c.online).length,active=new Set(result.sessions.flatMap(s=>s.interviewers.map(p=>p.id))).size;
@@ -282,17 +294,19 @@
   }
   function exportHeat(){
     const {dates,ranges,cells}=heatLayout();
-    const width=Math.max(750,190+dates.length*270),height=230+ranges.length*95;let shapes=`<rect width="${width}" height="${height}" fill="#fff"/><text x="45" y="46" font-size="25" font-weight="600">志愿者面试 · 人均可用时间</text><text x="45" y="77" font-size="13" fill="#6f829b">${config.batchMinutes} 分钟 / 场 · 单位：分钟 / 人</text>`;
+    const width=Math.max(750,190+dates.length*270),height=280+ranges.length*95;let shapes=`<rect width="${width}" height="${height}" fill="#fff"/><text x="45" y="46" font-size="25" font-weight="600">志愿者面试 · 人均可用时间</text><text x="45" y="77" font-size="13" fill="#6f829b">${config.batchMinutes} 分钟 / 场 · 单位：分钟 / 人</text>`;
     dates.forEach((d,i)=>shapes+=`<text x="${280+i*270}" y="120" text-anchor="middle" font-size="17">${d}</text>`);
     ranges.forEach(([start,end],row)=>{shapes+=`<text x="25" y="${187+row*95}" font-size="14">${Batches.clock(start)}–${Batches.clock(end)}</text>`;dates.forEach((date,col)=>{
       const s=cells.get(date+'|'+start+'|'+end),v=s?.average,c=s?heatColor(s):{bg:'#f1f3f5',fg:'#929da8'},x=155+col*270,y=142+row*95;
       shapes+=`<rect x="${x}" y="${y}" width="250" height="83" rx="10" fill="${c.bg}"/><text x="${x+18}" y="${y+34}" font-size="26" fill="${c.fg}">${v==null?'—':v.toFixed(2)}</text><text x="${x+18}" y="${y+61}" font-size="12" fill="${c.fg}">${!s?'无此时段':!s.enabled?'未启用':!s.covered?'场务不足':s.count+' 人到场 · '+s.ongoingCount+' 人面试中'}</text>`;
     });});
+    heatBands().forEach((c,i)=>{const x=45+i*(width-90)/4;shapes+=`<rect x="${x}" y="${height-108}" width="12" height="12" rx="2" fill="${c.bg}" stroke="${c.fg}"/><text x="${x+19}" y="${height-97}" font-size="12" fill="${c.fg}">${esc(c.label)}</text>`;});
     shapes+=`<text x="45" y="${height-55}" font-size="12" fill="#6f829b">人均可用 = 本场面试官可用总分钟（扣除间隔）÷ 本场到场人数；无新到场时显示 —。</text><text x="45" y="${height-29}" font-size="12" fill="#6f829b">已安排 ${result.matched} / ${result.total} 人；末场扣除预留，不足 ${config.batchMinutes} 分钟按实际可用时间计算。</text>`;
     download('人均可用时间热力图.svg',`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" fill="#142a43">${shapes}</svg>`,'image/svg+xml;charset=utf-8');toast('已保存可缩放的 SVG 热力图');
   }
   document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>navigate(b.dataset.page));
   $('viewAll').onclick=()=>navigate('schedule');$('importShortcut').onclick=()=>navigate('data');
+  $('viewStaff').onclick=()=>navigate('staff');
   $('heatmap').onclick=e=>{const b=e.target.closest('[data-batch]');if(b&&!b.disabled){
     try{if(config.arrivalMode!=='batch')commitConfig({...config,arrivalMode:'batch'},true);$('sessionFilter').value=b.dataset.slot;$('batchFilter').value=b.dataset.batch;$('statusFilter').value='assigned';$('search').value='';$('modeFilter').value='all';page=1;renderSchedule();navigate('schedule');}catch(error){toast(error.message);}
   }};
@@ -332,6 +346,10 @@
   $('exportStaff').onclick=()=>csv('上马工作人员安排.csv',[['姓名','部门','日期','时段','角色','面试人数','实际面试分钟','场务分钟','线上人数','备注'],...result.sessions.flatMap(s=>data.staff.filter(p=>['interview','field'].includes(s.roles[p.id])).map(p=>{
     const a=result.assignments.filter(a=>a.session===s.id&&a.interviewer===p.id),f=s.roles[p.id]==='field';return [p.name,p.department,s.date,hm(s.start)+'–'+hm(s.end),f?'场务':'面试官',a.length,a.reduce((n,c)=>n+c.durationSeconds,0)/60,f?s.end-s.start:0,a.filter(c=>c.online).length,s.warnings.join('；')];
   }))]);
+  $('exportDuties').onclick=()=>csv('工作人员职责总表.csv',[
+    ['姓名','部门',...result.sessions.map(s=>`${s.date} ${hm(s.start)}–${hm(s.end)}`),'面试人数','场务班次'],
+    ...dutyMatrix().map(({person,cells,workload})=>[person.name,person.department,...cells.map(c=>c.label),workload.count,workload.fieldShifts])
+  ]);
   $('exportHeat').onclick=exportHeat;
   $('saveHtml').onclick=()=>{const clone=document.documentElement.cloneNode(true);clone.querySelector('#toast').textContent='';download('面试排班_当前方案.html','<!DOCTYPE html>\n'+clone.outerHTML,'text/html;charset=utf-8');toast('已保存当前问卷与排班设置');};
   for(const [id,kind] of [['candidateTemplate','candidates'],['staffTemplate','staff']])$(id).onclick=()=>{
